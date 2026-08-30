@@ -1,50 +1,1756 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Paused</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f8fafc;
-            color: #0f172a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            text-align: center;
-            padding: 2rem;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            max-width: 400px;
-            width: 100%;
-        }
-        .icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        h1 {
-            font-size: 1.5rem;
-            margin: 0 0 0.5rem 0;
-            color: #0f172a;
-        }
-        p {
-            color: #475569;
-            margin: 0;
-            font-size: 1rem;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+
+  <title>Horizensearch</title>
+
+  <style>
+    :root {
+      --bg: #020711;
+      --bg-2: #061525;
+      --card: rgba(5, 20, 37, 0.86);
+      --card-border: rgba(54, 157, 224, 0.28);
+
+      --blue: #25a6ff;
+      --blue-light: #9ce2ff;
+      --blue-soft: rgba(37, 166, 255, 0.16);
+
+      --text: #eef9ff;
+      --muted: #91abc1;
+      --muted-2: #6e899f;
+
+      --button: #12324d;
+      --danger: #ff6678;
+
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    /* =========================================================
+       APP FRAME
+       ========================================================= */
+
+    #horizensearch-app {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+
+      display: none;
+
+      width: 100%;
+      height: 100%;
+
+      border: 0;
+      background: #fff;
+    }
+
+    /* =========================================================
+       LOADING / UPDATE SCREEN
+       ========================================================= */
+
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 24px;
+      overflow: hidden;
+
+      background:
+        radial-gradient(
+          circle at 14% 18%,
+          rgba(28, 139, 230, 0.30),
+          transparent 30rem
+        ),
+        radial-gradient(
+          circle at 86% 82%,
+          rgba(14, 94, 174, 0.25),
+          transparent 28rem
+        ),
+        radial-gradient(
+          circle at 50% 50%,
+          rgba(20, 72, 112, 0.10),
+          transparent 40rem
+        ),
+        linear-gradient(135deg, #01050c 0%, #031525 52%, #01060e 100%);
+
+      transition:
+        opacity 0.35s ease,
+        visibility 0.35s ease;
+    }
+
+    #loading-screen::before {
+      content: "";
+
+      position: absolute;
+      inset: 0;
+
+      opacity: 0.20;
+
+      background-image:
+        linear-gradient(
+          rgba(104, 196, 255, 0.10) 1px,
+          transparent 1px
+        ),
+        linear-gradient(
+          90deg,
+          rgba(104, 196, 255, 0.10) 1px,
+          transparent 1px
+        );
+
+      background-size: 46px 46px;
+
+      mask-image: linear-gradient(
+        to bottom,
+        black,
+        rgba(0, 0, 0, 0.65),
+        transparent
+      );
+
+      pointer-events: none;
+    }
+
+    #loading-screen::after {
+      content: "";
+
+      position: absolute;
+      inset: 0;
+
+      background:
+        linear-gradient(
+          120deg,
+          transparent 0%,
+          rgba(85, 190, 255, 0.04) 45%,
+          transparent 65%
+        );
+
+      pointer-events: none;
+    }
+
+    .loading-card {
+      position: relative;
+      z-index: 2;
+
+      width: min(100%, 620px);
+
+      padding: clamp(28px, 6vw, 46px);
+
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(8, 30, 51, 0.90),
+          rgba(3, 14, 27, 0.88)
+        );
+
+      box-shadow:
+        0 35px 100px rgba(0, 0, 0, 0.58),
+        0 0 0 1px rgba(255, 255, 255, 0.025) inset,
+        0 0 80px rgba(37, 166, 255, 0.07);
+
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+
+      margin-bottom: 13px;
+    }
+
+    .brand-icon {
+      display: grid;
+      place-items: center;
+
+      width: 43px;
+      height: 43px;
+
+      border: 1px solid rgba(140, 219, 255, 0.30);
+      border-radius: 13px;
+
+      color: var(--blue-light);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(37, 166, 255, 0.24),
+          rgba(37, 166, 255, 0.05)
+        );
+
+      box-shadow:
+        0 0 28px rgba(37, 166, 255, 0.16),
+        inset 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .brand-icon svg {
+      width: 23px;
+      height: 23px;
+    }
+
+    .brand-name {
+      margin: 0;
+
+      color: var(--blue-light);
+
+      font-size: clamp(2rem, 7vw, 3.4rem);
+      font-weight: 800;
+      line-height: 1;
+
+      letter-spacing: -0.055em;
+
+      text-shadow:
+        0 0 30px rgba(37, 166, 255, 0.18);
+    }
+
+    .suite-name {
+      margin: 0 0 34px;
+
+      color: var(--muted);
+
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.20em;
+      text-transform: uppercase;
+    }
+
+    .loading-row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+
+      min-height: 30px;
+
+      color: #e3f3ff;
+      font-size: 0.98rem;
+      line-height: 1.45;
+    }
+
+    .spinner {
+      position: relative;
+
+      width: 27px;
+      height: 27px;
+
+      flex: 0 0 27px;
+
+      border: 3px solid rgba(140, 219, 255, 0.13);
+      border-top-color: var(--blue);
+      border-right-color: rgba(140, 219, 255, 0.55);
+
+      border-radius: 50%;
+
+      animation: spin 0.75s linear infinite;
+
+      box-shadow:
+        0 0 18px rgba(37, 166, 255, 0.16);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+
+      margin-top: 28px;
+
+      overflow: hidden;
+
+      border-radius: 999px;
+
+      background: rgba(140, 219, 255, 0.09);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .progress-bar {
+      width: 38%;
+      height: 100%;
+
+      border-radius: inherit;
+
+      background:
+        linear-gradient(
+          90deg,
+          transparent,
+          var(--blue),
+          var(--blue-light),
+          var(--blue),
+          transparent
+        );
+
+      filter: drop-shadow(0 0 8px rgba(37, 166, 255, 0.65));
+
+      animation: progress 1.45s ease-in-out infinite;
+    }
+
+    .loading-subtext {
+      margin: 15px 0 0;
+
+      color: var(--muted-2);
+
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    /* =========================================================
+       UPDATE POPUP
+       ========================================================= */
+
+    #update-popup {
+      position: fixed;
+      z-index: 11000;
+
+      right: 20px;
+      bottom: 20px;
+
+      display: none;
+
+      width: min(calc(100vw - 40px), 430px);
+
+      padding: 21px;
+
+      border: 1px solid rgba(44, 138, 201, 0.42);
+      border-radius: 18px;
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(8, 30, 50, 0.97),
+          rgba(4, 17, 31, 0.98)
+        );
+
+      box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.55),
+        0 0 40px rgba(37, 166, 255, 0.07);
+
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+
+      animation: popup-in 0.25s ease-out;
+    }
+
+    .update-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+    }
+
+    .update-icon {
+      display: grid;
+      place-items: center;
+
+      width: 39px;
+      height: 39px;
+
+      flex: 0 0 39px;
+
+      border-radius: 12px;
+
+      color: var(--blue-light);
+      background: var(--blue-soft);
+    }
+
+    .update-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    #update-popup h2 {
+      margin: 0 0 5px;
+
+      color: var(--blue-light);
+
+      font-size: 1.05rem;
+      line-height: 1.3;
+    }
+
+    #update-popup p {
+      margin: 0;
+
+      color: #b9d2e5;
+
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .update-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+
+      margin-top: 19px;
+    }
+
+    .update-buttons button {
+      min-height: 40px;
+
+      padding: 9px 14px;
+
+      border: 0;
+      border-radius: 10px;
+
+      cursor: pointer;
+
+      font-size: 0.86rem;
+      font-weight: 750;
+
+      transition:
+        transform 0.15s ease,
+        filter 0.15s ease,
+        opacity 0.15s ease;
+    }
+
+    .update-buttons button:hover {
+      filter: brightness(1.10);
+      transform: translateY(-1px);
+    }
+
+    .update-buttons button:active {
+      transform: translateY(0);
+    }
+
+    .update-buttons button:disabled {
+      cursor: wait;
+      opacity: 0.55;
+      transform: none;
+    }
+
+    #update-now-button {
+      color: #001321;
+
+      background:
+        linear-gradient(
+          135deg,
+          #b8edff,
+          #76d4ff
+        );
+
+      box-shadow:
+        0 5px 20px rgba(37, 166, 255, 0.18);
+    }
+
+    #update-offline-button {
+      color: var(--text);
+      background: var(--button);
+    }
+
+    /* =========================================================
+       SMALL SCREENS
+       ========================================================= */
+
+    @media (max-width: 520px) {
+      #loading-screen {
+        padding: 15px;
+      }
+
+      .loading-card {
+        padding: 27px 23px;
+        border-radius: 19px;
+      }
+
+      .suite-name {
+        margin-bottom: 28px;
+        font-size: 0.68rem;
+      }
+
+      .loading-row {
+        font-size: 0.90rem;
+      }
+
+      #update-popup {
+        right: 12px;
+        bottom: 12px;
+        width: calc(100vw - 24px);
+      }
+
+      .update-buttons {
+        flex-direction: column;
+      }
+
+      .update-buttons button {
+        width: 100%;
+      }
+    }
+
+    /* =========================================================
+       ANIMATIONS
+       ========================================================= */
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes progress {
+      from {
+        transform: translateX(-160%);
+      }
+
+      to {
+        transform: translateX(330%);
+      }
+    }
+
+    @keyframes popup-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+  </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="icon">⏸️</div>
-        <h1>Admin-AI has paused the database</h1>
-        <p>Please check back later or contact your system administrator.</p>
+
+  <!-- =======================================================
+       LOADING / UPDATE SCREEN
+       ======================================================= -->
+
+  <section
+    id="loading-screen"
+    aria-live="polite"
+    aria-busy="true"
+  >
+    <div class="loading-card">
+
+      <div class="brand-mark">
+        <div class="brand-icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="8.5"></circle>
+            <path d="M3.5 12h17"></path>
+            <path d="M12 3.5c2.2 2.4 3.3 5.2 3.3 8.5S14.2 18.1 12 20.5"></path>
+            <path d="M12 3.5c-2.2 2.4-3.3 5.2-3.3 8.5s1.1 6.1 3.3 8.5"></path>
+          </svg>
+        </div>
+
+        <h1 class="brand-name">Horizensearch</h1>
+      </div>
+
+      <p class="suite-name">Horizentech Suite</p>
+
+      <div class="loading-row">
+        <div class="spinner" aria-hidden="true"></div>
+        <span id="loading-message">
+          Preparing Horizensearch…
+        </span>
+      </div>
+
+      <div class="progress-track" aria-hidden="true">
+        <div class="progress-bar"></div>
+      </div>
+
+      <p class="loading-subtext" id="loading-subtext">
+        Checking for the latest version.
+      </p>
+
     </div>
+  </section>
+
+
+  <!-- =======================================================
+       REMOTE APP
+       ======================================================= -->
+
+  <iframe
+    id="horizensearch-app"
+    title="Horizensearch"
+    sandbox="allow-forms allow-modals allow-popups allow-scripts allow-same-origin"
+  ></iframe>
+
+
+  <!-- =======================================================
+       UPDATE NOTIFICATION
+       ======================================================= -->
+
+  <aside
+    id="update-popup"
+    role="dialog"
+    aria-modal="false"
+    aria-labelledby="update-popup-title"
+  >
+    <div class="update-header">
+
+      <div class="update-icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 3v12"></path>
+          <path d="m7 10 5 5 5-5"></path>
+          <path d="M5 21h14"></path>
+        </svg>
+      </div>
+
+      <div>
+        <h2 id="update-popup-title">
+          Horizensearch update available
+        </h2>
+
+        <p id="update-popup-message">
+          A newer version of Horizensearch has been found.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="update-buttons">
+      <button
+        id="update-now-button"
+        type="button"
+      >
+        Update now
+      </button>
+
+      <button
+        id="update-offline-button"
+        type="button"
+      >
+        Update next join
+      </button>
+    </div>
+  </aside>
+
+
+  <script>
+    "use strict";
+
+    /* =========================================================
+       CONFIGURATION
+       ========================================================= */
+
+    /*
+      Your current remote Horizensearch endpoint.
+
+      Despite the old comments saying "GitHub", this is a CDN
+      endpoint, so the code below treats it as a generic remote
+      HTML source.
+    */
+    const CDN_URL =
+      "https://raw.githubusercontent.com/TheCoder-creator/horizensearch/refs/heads/main/index.html";
+
+    /*
+      Minimum time the startup/update screen remains visible.
+    */
+    const MINIMUM_UPDATE_SCREEN_TIME = 2200;
+
+    /*
+      Background update checks.
+    */
+    const UPDATE_CHECK_INTERVAL = 10000;
+
+    /*
+      How long we wait after a failed network request before
+      allowing another background attempt.
+    */
+    const UPDATE_RETRY_DELAY = 15000;
+
+    /*
+      IndexedDB database information.
+
+      IndexedDB is used instead of localStorage for the actual
+      HTML because localStorage has a relatively small quota and
+      can easily break if the remote application becomes large.
+    */
+    const DB_NAME = "HorizensearchDatabase";
+    const DB_VERSION = 1;
+    const DB_STORE = "app";
+
+    /*
+      Small localStorage values are still fine for state.
+    */
+    const STORAGE = {
+      updateState: "horizensearch.updateState"
+    };
+
+    const UPDATE_STATES = {
+      UPDATED: "Updated",
+      UPDATE_NEXT_JOIN: "Update next join"
+    };
+
+
+    /* =========================================================
+       DOM
+       ========================================================= */
+
+    const loadingScreen =
+      document.getElementById("loading-screen");
+
+    const loadingMessage =
+      document.getElementById("loading-message");
+
+    const loadingSubtext =
+      document.getElementById("loading-subtext");
+
+    const appFrame =
+      document.getElementById("horizensearch-app");
+
+    const updatePopup =
+      document.getElementById("update-popup");
+
+    const updatePopupMessage =
+      document.getElementById("update-popup-message");
+
+    const updateNowButton =
+      document.getElementById("update-now-button");
+
+    const updateOfflineButton =
+      document.getElementById("update-offline-button");
+
+
+    /* =========================================================
+       RUNTIME STATE
+       ========================================================= */
+
+    let installedHtml = null;
+    let installedHash = null;
+
+    let pendingHtml = null;
+    let pendingHash = null;
+
+    let discoveredUpdateHtml = null;
+    let discoveredUpdateHash = null;
+
+    let updateCheckInProgress = false;
+    let updateInstallationInProgress = false;
+
+    let backgroundCheckTimer = null;
+    let retryTimer = null;
+
+
+    /* =========================================================
+       GENERAL HELPERS
+       ========================================================= */
+
+    function wait(milliseconds) {
+      return new Promise(resolve => {
+        setTimeout(resolve, milliseconds);
+      });
+    }
+
+    function setLoading(message, subtext = "") {
+      loadingMessage.textContent = message;
+
+      if (subtext) {
+        loadingSubtext.textContent = subtext;
+      }
+    }
+
+    function showLoadingScreen(message, subtext = "") {
+      setLoading(message, subtext);
+
+      loadingScreen.style.display = "flex";
+      loadingScreen.setAttribute("aria-busy", "true");
+
+      appFrame.style.display = "none";
+
+      hideUpdatePopup();
+    }
+
+    function hideLoadingScreen() {
+      loadingScreen.style.display = "none";
+      loadingScreen.setAttribute("aria-busy", "false");
+    }
+
+    function showUpdatePopup(message) {
+      updatePopupMessage.textContent =
+        message ||
+        "A newer version of Horizensearch has been found.";
+
+      updatePopup.style.display = "block";
+    }
+
+    function hideUpdatePopup() {
+      updatePopup.style.display = "none";
+    }
+
+    function getUpdateState() {
+      return (
+        localStorage.getItem(STORAGE.updateState) ||
+        UPDATE_STATES.UPDATED
+      );
+    }
+
+    function setUpdateState(state) {
+      localStorage.setItem(
+        STORAGE.updateState,
+        state
+      );
+    }
+
+
+    /* =========================================================
+       INDEXEDDB
+       ========================================================= */
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(
+          DB_NAME,
+          DB_VERSION
+        );
+
+        request.onupgradeneeded = event => {
+          const database = event.target.result;
+
+          if (!database.objectStoreNames.contains(DB_STORE)) {
+            database.createObjectStore(DB_STORE);
+          }
+        };
+
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+
+        request.onerror = () => {
+          reject(request.error);
+        };
+      });
+    }
+
+    async function databaseSet(key, value) {
+      const database = await openDatabase();
+
+      return new Promise((resolve, reject) => {
+        const transaction =
+          database.transaction(
+            DB_STORE,
+            "readwrite"
+          );
+
+        transaction.objectStore(DB_STORE).put(
+          value,
+          key
+        );
+
+        transaction.oncomplete = () => {
+          database.close();
+          resolve();
+        };
+
+        transaction.onerror = () => {
+          database.close();
+          reject(transaction.error);
+        };
+      });
+    }
+
+    async function databaseGet(key) {
+      const database = await openDatabase();
+
+      return new Promise((resolve, reject) => {
+        const transaction =
+          database.transaction(
+            DB_STORE,
+            "readonly"
+          );
+
+        const request =
+          transaction.objectStore(DB_STORE).get(key);
+
+        request.onsuccess = () => {
+          resolve(request.result ?? null);
+        };
+
+        request.onerror = () => {
+          reject(request.error);
+        };
+
+        transaction.oncomplete = () => {
+          database.close();
+        };
+      });
+    }
+
+    async function databaseDelete(key) {
+      const database = await openDatabase();
+
+      return new Promise((resolve, reject) => {
+        const transaction =
+          database.transaction(
+            DB_STORE,
+            "readwrite"
+          );
+
+        transaction.objectStore(DB_STORE).delete(key);
+
+        transaction.oncomplete = () => {
+          database.close();
+          resolve();
+        };
+
+        transaction.onerror = () => {
+          database.close();
+          reject(transaction.error);
+        };
+      });
+    }
+
+
+    /* =========================================================
+       HASHING
+       ========================================================= */
+
+    async function createHash(text) {
+      if (
+        !window.crypto ||
+        !window.crypto.subtle
+      ) {
+        /*
+          Older environments may not expose Web Crypto.
+          The fallback is deliberately simple; modern browsers
+          will always use SHA-256.
+        */
+        let hash = 0;
+
+        for (let i = 0; i < text.length; i++) {
+          hash =
+            ((hash << 5) - hash) +
+            text.charCodeAt(i);
+
+          hash |= 0;
+        }
+
+        return `fallback-${Math.abs(hash)}`;
+      }
+
+      const bytes =
+        new TextEncoder().encode(text);
+
+      const hashBuffer =
+        await crypto.subtle.digest(
+          "SHA-256",
+          bytes
+        );
+
+      return Array
+        .from(new Uint8Array(hashBuffer))
+        .map(byte =>
+          byte.toString(16).padStart(2, "0")
+        )
+        .join("");
+    }
+
+
+    /* =========================================================
+       REMOTE DOWNLOAD
+       ========================================================= */
+
+    async function downloadLatestHtml() {
+      const separator =
+        CDN_URL.includes("?")
+          ? "&"
+          : "?";
+
+      const url =
+        `${CDN_URL}${separator}cacheBust=${Date.now()}`;
+
+      const response =
+        await fetch(url, {
+          method: "GET",
+          cache: "no-store",
+          credentials: "omit",
+          headers: {
+            Accept: "text/html"
+          }
+        });
+
+      if (!response.ok) {
+        throw new Error(
+          `Remote server returned HTTP ${response.status}`
+        );
+      }
+
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      /*
+        Do not blindly execute a JSON/error page returned by the
+        CDN as if it were the application.
+      */
+      if (
+        contentType &&
+        !contentType.toLowerCase().includes("text/html") &&
+        !contentType.toLowerCase().includes("application/xhtml")
+      ) {
+        console.warn(
+          "Unexpected content type:",
+          contentType
+        );
+      }
+
+      const html =
+        await response.text();
+
+      if (!html.trim()) {
+        throw new Error(
+          "The remote application returned an empty document."
+        );
+      }
+
+      return html;
+    }
+
+
+    /* =========================================================
+       APP STORAGE
+       ========================================================= */
+
+    async function saveInstalledVersion(html, hash) {
+      await databaseSet(
+        "installedHtml",
+        html
+      );
+
+      await databaseSet(
+        "installedHash",
+        hash
+      );
+
+      installedHtml = html;
+      installedHash = hash;
+    }
+
+    async function loadInstalledVersion() {
+      installedHtml =
+        await databaseGet("installedHtml");
+
+      installedHash =
+        await databaseGet("installedHash");
+
+      /*
+        Migration from the old localStorage version.
+
+        This lets existing users keep their currently installed
+        Horizensearch instead of being treated as first-time users.
+      */
+      if (!installedHtml) {
+        const oldHtml =
+          localStorage.getItem(
+            "horizensearch.installedHtml"
+          );
+
+        const oldHash =
+          localStorage.getItem(
+            "horizensearch.installedHash"
+          );
+
+        if (oldHtml && oldHash) {
+          try {
+            await saveInstalledVersion(
+              oldHtml,
+              oldHash
+            );
+
+            localStorage.removeItem(
+              "horizensearch.installedHtml"
+            );
+
+            localStorage.removeItem(
+              "horizensearch.installedHash"
+            );
+          } catch (error) {
+            console.warn(
+              "Could not migrate old installed version:",
+              error
+            );
+          }
+        }
+      }
+    }
+
+    async function savePendingVersion(html, hash) {
+      await databaseSet(
+        "pendingHtml",
+        html
+      );
+
+      await databaseSet(
+        "pendingHash",
+        hash
+      );
+
+      pendingHtml = html;
+      pendingHash = hash;
+    }
+
+    async function loadPendingVersion() {
+      pendingHtml =
+        await databaseGet("pendingHtml");
+
+      pendingHash =
+        await databaseGet("pendingHash");
+    }
+
+    async function clearPendingVersion() {
+      await databaseDelete("pendingHtml");
+      await databaseDelete("pendingHash");
+
+      pendingHtml = null;
+      pendingHash = null;
+    }
+
+
+    /* =========================================================
+       RUN APPLICATION
+       ========================================================= */
+
+    function runInstalledApp(html) {
+      if (!html) {
+        throw new Error(
+          "Cannot launch Horizensearch: installed HTML is missing."
+        );
+      }
+
+      appFrame.srcdoc = html;
+      appFrame.style.display = "block";
+
+      hideLoadingScreen();
+    }
+
+
+    /* =========================================================
+       FIRST INSTALL / UPDATE NOW
+       ========================================================= */
+
+    async function installLatestVersion() {
+      if (updateInstallationInProgress) {
+        return;
+      }
+
+      updateInstallationInProgress = true;
+
+      const startedAt = Date.now();
+
+      showLoadingScreen(
+        "Downloading the latest Horizensearch version…",
+        "Getting the newest application build."
+      );
+
+      try {
+        const latestHtml =
+          await downloadLatestHtml();
+
+        setLoading(
+          "Preparing Horizensearch…",
+          "Verifying the downloaded application."
+        );
+
+        const latestHash =
+          await createHash(latestHtml);
+
+        const elapsed =
+          Date.now() - startedAt;
+
+        const remaining =
+          Math.max(
+            0,
+            MINIMUM_UPDATE_SCREEN_TIME - elapsed
+          );
+
+        await wait(remaining);
+
+        setLoading(
+          "Installing Horizensearch…",
+          "Saving the new version for offline use."
+        );
+
+        await saveInstalledVersion(
+          latestHtml,
+          latestHash
+        );
+
+        await clearPendingVersion();
+
+        setUpdateState(
+          UPDATE_STATES.UPDATED
+        );
+
+        discoveredUpdateHtml = null;
+        discoveredUpdateHash = null;
+
+        setLoading(
+          "Launching Horizensearch…",
+          "Your application is ready."
+        );
+
+        await wait(350);
+
+        runInstalledApp(
+          latestHtml
+        );
+
+      } catch (error) {
+        console.error(
+          "Horizensearch installation failed:",
+          error
+        );
+
+        /*
+          If we already have a working installed version,
+          never leave the user stranded on the loading screen.
+        */
+        if (installedHtml) {
+          setLoading(
+            "Update unavailable.",
+            "Starting your installed version instead."
+          );
+
+          await wait(900);
+
+          runInstalledApp(
+            installedHtml
+          );
+        } else {
+          setLoading(
+            "Horizensearch could not be downloaded.",
+            "Check your internet connection and reload the page."
+          );
+        }
+
+      } finally {
+        updateInstallationInProgress = false;
+      }
+    }
+
+
+    /* =========================================================
+       DEFERRED UPDATE
+       ========================================================= */
+
+    async function installDeferredUpdateOnJoin() {
+      if (
+        getUpdateState() !==
+        UPDATE_STATES.UPDATE_NEXT_JOIN
+      ) {
+        return false;
+      }
+
+      await loadPendingVersion();
+
+      /*
+        A deferred update is only valid if both pieces exist.
+      */
+      if (
+        !pendingHtml ||
+        !pendingHash
+      ) {
+        console.warn(
+          "Deferred update was incomplete; clearing it."
+        );
+
+        await clearPendingVersion();
+
+        setUpdateState(
+          UPDATE_STATES.UPDATED
+        );
+
+        return false;
+      }
+
+      showLoadingScreen(
+        "Installing your saved update…",
+        "Your previously downloaded update is being applied."
+      );
+
+      try {
+        await wait(
+          MINIMUM_UPDATE_SCREEN_TIME
+        );
+
+        await saveInstalledVersion(
+          pendingHtml,
+          pendingHash
+        );
+
+        await clearPendingVersion();
+
+        setUpdateState(
+          UPDATE_STATES.UPDATED
+        );
+
+        discoveredUpdateHtml = null;
+        discoveredUpdateHash = null;
+
+        setLoading(
+          "Launching Horizensearch…",
+          "Update installed successfully."
+        );
+
+        await wait(350);
+
+        runInstalledApp(
+          installedHtml
+        );
+
+        return true;
+
+      } catch (error) {
+        console.error(
+          "Deferred update failed:",
+          error
+        );
+
+        /*
+          Keep the pending update and state intact so it can
+          be attempted again on the next join.
+        */
+        if (installedHtml) {
+          setLoading(
+            "Could not install the saved update.",
+            "Starting your current installed version."
+          );
+
+          await wait(800);
+
+          runInstalledApp(
+            installedHtml
+          );
+
+          return true;
+        }
+
+        return false;
+      }
+    }
+
+
+    /* =========================================================
+       BACKGROUND UPDATE CHECK
+       ========================================================= */
+
+    async function checkForNewUpdate() {
+      if (
+        updateCheckInProgress ||
+        updateInstallationInProgress ||
+        discoveredUpdateHtml !== null
+      ) {
+        return;
+      }
+
+      updateCheckInProgress = true;
+
+      try {
+        const latestHtml =
+          await downloadLatestHtml();
+
+        const latestHash =
+          await createHash(latestHtml);
+
+        /*
+          There is no meaningful comparison possible without
+          an installed version.
+        */
+        if (!installedHash) {
+          return;
+        }
+
+        if (
+          latestHash !== installedHash
+        ) {
+          discoveredUpdateHtml =
+            latestHtml;
+
+          discoveredUpdateHash =
+            latestHash;
+
+          showUpdatePopup(
+            "A newer version of Horizensearch has been found. You can install it now or apply it the next time you join."
+          );
+        }
+
+      } catch (error) {
+        console.warn(
+          "Background update check failed:",
+          error
+        );
+
+        /*
+          Don't spam the server every 10 seconds forever when
+          the network is unavailable.
+        */
+        scheduleRetry();
+
+      } finally {
+        updateCheckInProgress = false;
+      }
+    }
+
+
+    /* =========================================================
+       UPDATE RETRY
+       ========================================================= */
+
+    function scheduleRetry() {
+      if (retryTimer) {
+        return;
+      }
+
+      retryTimer =
+        setTimeout(() => {
+          retryTimer = null;
+
+          checkForNewUpdate();
+        }, UPDATE_RETRY_DELAY);
+    }
+
+
+    /* =========================================================
+       BACKGROUND CHECK TIMER
+       ========================================================= */
+
+    function startBackgroundChecks() {
+      if (backgroundCheckTimer) {
+        clearInterval(
+          backgroundCheckTimer
+        );
+      }
+
+      /*
+        Check every 10 seconds.
+      */
+      backgroundCheckTimer =
+        setInterval(
+          checkForNewUpdate,
+          UPDATE_CHECK_INTERVAL
+        );
+
+      /*
+        Also perform one check shortly after launch.
+        The short delay prevents the app and network request
+        from fighting during initial startup.
+      */
+      setTimeout(
+        checkForNewUpdate,
+        1500
+      );
+    }
+
+
+    /* =========================================================
+       UPDATE NOW BUTTON
+       ========================================================= */
+
+    updateNowButton.addEventListener(
+      "click",
+      async () => {
+        if (
+          !discoveredUpdateHtml ||
+          !discoveredUpdateHash
+        ) {
+          return;
+        }
+
+        /*
+          Disable both buttons immediately so double-clicking
+          cannot trigger multiple installations.
+        */
+        updateNowButton.disabled = true;
+        updateOfflineButton.disabled = true;
+
+        /*
+          Use the version we already downloaded rather than
+          downloading it a second time.
+        */
+        const html =
+          discoveredUpdateHtml;
+
+        const hash =
+          discoveredUpdateHash;
+
+        hideUpdatePopup();
+
+        updateInstallationInProgress = true;
+
+        const startedAt = Date.now();
+
+        showLoadingScreen(
+          "Installing the latest Horizensearch version…",
+          "Applying the update that was just downloaded."
+        );
+
+        try {
+          const elapsed =
+            Date.now() - startedAt;
+
+          const remaining =
+            Math.max(
+              0,
+              MINIMUM_UPDATE_SCREEN_TIME - elapsed
+            );
+
+          await wait(remaining);
+
+          await saveInstalledVersion(
+            html,
+            hash
+          );
+
+          await clearPendingVersion();
+
+          setUpdateState(
+            UPDATE_STATES.UPDATED
+          );
+
+          discoveredUpdateHtml = null;
+          discoveredUpdateHash = null;
+
+          setLoading(
+            "Launching Horizensearch…",
+            "Update installed successfully."
+          );
+
+          await wait(350);
+
+          runInstalledApp(
+            html
+          );
+
+        } catch (error) {
+          console.error(
+            "Update installation failed:",
+            error
+          );
+
+          /*
+            Restore the update notification so the user can
+            try again instead of losing the downloaded update.
+          */
+          showUpdateScreen(
+            "The update could not be installed.",
+            "Your current version is still available."
+          );
+
+          await wait(1000);
+
+          if (installedHtml) {
+            runInstalledApp(
+              installedHtml
+            );
+
+            /*
+              The discovered update is intentionally preserved.
+            */
+            setTimeout(() => {
+              showUpdatePopup(
+                "The update is still available. You can try installing it again."
+              );
+            }, 500);
+          }
+
+        } finally {
+          updateInstallationInProgress = false;
+
+          updateNowButton.disabled = false;
+          updateOfflineButton.disabled = false;
+        }
+      }
+    );
+
+
+    /* =========================================================
+       UPDATE NEXT JOIN BUTTON
+       ========================================================= */
+
+    updateOfflineButton.addEventListener(
+      "click",
+      async () => {
+        if (
+          !discoveredUpdateHtml ||
+          !discoveredUpdateHash
+        ) {
+          return;
+        }
+
+        updateNowButton.disabled = true;
+        updateOfflineButton.disabled = true;
+
+        try {
+          /*
+            The new HTML was already downloaded by the
+            background update check. Save that exact copy.
+          */
+          await savePendingVersion(
+            discoveredUpdateHtml,
+            discoveredUpdateHash
+          );
+
+          setUpdateState(
+            UPDATE_STATES.UPDATE_NEXT_JOIN
+          );
+
+          discoveredUpdateHtml = null;
+          discoveredUpdateHash = null;
+
+          hideUpdatePopup();
+
+        } catch (error) {
+          console.error(
+            "Could not save deferred update:",
+            error
+          );
+
+          showUpdatePopup(
+            "The update could not be saved for your next join. Please try again."
+          );
+
+        } finally {
+          updateNowButton.disabled = false;
+          updateOfflineButton.disabled = false;
+        }
+      }
+    );
+
+
+    /* =========================================================
+       STARTUP
+       ========================================================= */
+
+    async function startHorizensearch() {
+      try {
+        /*
+          Load whatever is already installed.
+        */
+        await loadInstalledVersion();
+
+        /*
+          First priority:
+          If a deferred update exists, install it now.
+        */
+        const deferredInstalled =
+          await installDeferredUpdateOnJoin();
+
+        if (deferredInstalled) {
+          startBackgroundChecks();
+          return;
+        }
+
+        /*
+          Normal startup with an installed version.
+        */
+        if (installedHtml) {
+          runInstalledApp(
+            installedHtml
+          );
+
+          /*
+            Make sure the state is sane.
+          */
+          if (
+            !localStorage.getItem(
+              STORAGE.updateState
+            )
+          ) {
+            setUpdateState(
+              UPDATE_STATES.UPDATED
+            );
+          }
+
+          startBackgroundChecks();
+          return;
+        }
+
+        /*
+          No installed version means this is the first join.
+        */
+        await installLatestVersion();
+
+        /*
+          Only start background checks if the initial
+          installation succeeded.
+        */
+        if (installedHtml) {
+          startBackgroundChecks();
+        }
+
+      } catch (error) {
+        console.error(
+          "Horizensearch startup failed:",
+          error
+        );
+
+        /*
+          Last-resort recovery.
+        */
+        if (installedHtml) {
+          runInstalledApp(
+            installedHtml
+          );
+
+          startBackgroundChecks();
+          return;
+        }
+
+        showLoadingScreen(
+          "Horizensearch could not start.",
+          "Reload the page and try again."
+        );
+      }
+    }
+
+
+    /* =========================================================
+       START
+       ========================================================= */
+
+    startHorizensearch();
+
+  </script>
 </body>
 </html>
