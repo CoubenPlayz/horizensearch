@@ -676,14 +676,26 @@
        ========================================================= */
 
     /*
-      Your current remote Horizensearch endpoint.
+      Supabase project that hosts the remote Horizensearch
+      build.
 
-      Despite the old comments saying "GitHub", this is a CDN
-      endpoint, so the code below treats it as a generic remote
-      HTML source.
+      The publishable key is safe to expose in front-end code
+      because the table is protected by Row Level Security:
+      anonymous visitors can only read the build, never write.
     */
-    const CDN_URL =
-      "https://raw.githubusercontent.com/TheCoder-creator/horizencdn/refs/heads/main/index.html";
+    const SUPABASE_URL =
+      "https://xlisbmtenekjmundxbcn.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+      "sb_publishable_Cvs-AiKPTHrC_tfGfwlpSQ_4Hir5Cva";
+
+    /*
+      The table that stores the current Horizensearch build.
+
+      It must contain exactly one row (id = 1) with the full
+      HTML document in its "html" column.
+    */
+    const APP_TABLE = "horizensearch_app";
 
     /*
       Minimum time the startup/update screen remains visible.
@@ -989,17 +1001,13 @@
 
 
     /* =========================================================
-       REMOTE DOWNLOAD
+       REMOTE DOWNLOAD (SUPABASE)
        ========================================================= */
 
     async function downloadLatestHtml() {
-      const separator =
-        CDN_URL.includes("?")
-          ? "&"
-          : "?";
-
       const url =
-        `${CDN_URL}${separator}cacheBust=${Date.now()}`;
+        `${SUPABASE_URL}/rest/v1/${APP_TABLE}` +
+        "?select=html&id=eq.1";
 
       const response =
         await fetch(url, {
@@ -1007,40 +1015,33 @@
           cache: "no-store",
           credentials: "omit",
           headers: {
-            Accept: "text/html"
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            Authorization:
+              `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+            Accept: "application/json"
           }
         });
 
       if (!response.ok) {
         throw new Error(
-          `Remote server returned HTTP ${response.status}`
+          `Supabase returned HTTP ${response.status}`
         );
       }
 
-      const contentType =
-        response.headers.get("content-type") || "";
+      const rows =
+        await response.json();
 
-      /*
-        Do not blindly execute a JSON/error page returned by the
-        CDN as if it were the application.
-      */
-      if (
-        contentType &&
-        !contentType.toLowerCase().includes("text/html") &&
-        !contentType.toLowerCase().includes("application/xhtml")
-      ) {
-        console.warn(
-          "Unexpected content type:",
-          contentType
-        );
-      }
-
-      const html =
-        await response.text();
-
-      if (!html.trim()) {
+      if (!Array.isArray(rows) || rows.length === 0) {
         throw new Error(
-          "The remote application returned an empty document."
+          "No Horizensearch build was found in Supabase."
+        );
+      }
+
+      const html = rows[0].html;
+
+      if (typeof html !== "string" || !html.trim()) {
+        throw new Error(
+          "The Horizensearch build stored in Supabase is empty."
         );
       }
 
@@ -1569,10 +1570,10 @@
           );
 
           /*
-            Restore the update notification so the user can
+            Restore the loading screen so the user can
             try again instead of losing the downloaded update.
           */
-          showUpdateScreen(
+          showLoadingScreen(
             "The update could not be installed.",
             "Your current version is still available."
           );
