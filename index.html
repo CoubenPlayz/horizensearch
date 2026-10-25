@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HorizenIdentify Status</title>
     <style>
-        /* Reset and full-viewport setup */
         * {
             box-sizing: border-box;
         }
@@ -16,11 +15,9 @@
             height: 100%;
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #0f172a; /* Sleek, dark background */
+            background-color: #0f172a;
             color: #f8fafc;
         }
-
-        /* Container for the status message */
         .status-container {
             display: flex;
             flex-direction: column;
@@ -30,56 +27,29 @@
             height: 100%;
             text-align: center;
             padding: 20px;
-            transition: opacity 0.3s ease;
         }
-
         .status-message {
             font-size: 2rem;
             font-weight: 600;
             margin-bottom: 10px;
         }
-
         .status-subtext {
             font-size: 1rem;
             color: #94a3b8;
-        }
-
-        /* Fullscreen iframe styles */
-        .fullscreen-iframe {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: none; /* Hidden initially */
-            z-index: 9999;
         }
     </style>
 </head>
 <body>
 
-    <!-- Notification Screen -->
-    <div id="statusScreen" class="status-container">
+    <div class="status-container">
         <div class="status-message">HorizenIdentify has been turned off</div>
         <div class="status-subtext">Redirecting to HorizenSearch...</div>
     </div>
 
-    <!-- Target Iframe -->
-    <iframe id="targetFrame" class="fullscreen-iframe" src="https://horizensearch.com/main"></iframe>
-
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const statusScreen = document.getElementById("statusScreen");
-            const targetFrame = document.getElementById("targetFrame");
-
-            // Wait 1 second (1000 milliseconds) before showing the iframe
             setTimeout(() => {
-                // Fade out the text container
-                statusScreen.style.opacity = "0";
-                
-                // Display the fullscreen iframe
-                targetFrame.style.display = "block";
+                window.location.href = "https://horizensearch.com/main";
             }, 1000);
         });
     </script>
