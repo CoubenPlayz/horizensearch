@@ -1228,7 +1228,24 @@ const MSG_APP='https://messages.horizensearch.com';   /* where HorizenMessages i
 const OAUTH_CLIENT_ID='1c07850f-28fa-4d37-9dec-1b0ecb186baf';
 const OAUTH_REDIRECT=location.origin+location.pathname;
 
-const mb=supabase.createClient(MSG_URL,MSG_KEY,{auth:{storageKey:'hz_messages_auth'}});
+const mkDefault=()=>supabase.createClient(MSG_URL,MSG_KEY,{auth:{storageKey:'hz_messages_auth'}});
+let mb=mkDefault();
+/* Tokens from "Log in with HorizenMessages" also power the message/call popups */
+const TOK_KEY='hz_oauth_tokens';let oauthTok=null;
+function saveTok(t,user){oauthTok={access:t.access_token,refresh:t.refresh_token||(oauthTok&&oauthTok.refresh),exp:Date.now()+(t.expires_in||3600)*1000,user:user||(oauthTok&&oauthTok.user)};localStorage.setItem(TOK_KEY,JSON.stringify(oauthTok))}
+async function tokenFn(){
+  if(!oauthTok)return null;
+  if(Date.now()>oauthTok.exp-60000){
+    if(!oauthTok.refresh)return null;
+    try{
+      const r=await fetch(MSG_URL+'/auth/v1/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:oauthTok.refresh,client_id:OAUTH_CLIENT_ID})});
+      const t=await r.json();if(!r.ok||!t.access_token)throw 0;saveTok(t);
+    }catch(e){return null}
+  }
+  return oauthTok.access;
+}
+function useOAuthClient(){mb=supabase.createClient(MSG_URL,MSG_KEY,{accessToken:tokenFn})}
+function dropOAuth(){if(!oauthTok)return;if(started)teardown();oauthTok=null;localStorage.removeItem(TOK_KEY);mb=mkDefault()}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -1369,6 +1386,7 @@ function teardown(){
 }
 async function approved(uid){const {data}=await mb.from('approved_acounts').select('user_id').eq('user_id',uid).maybeSingle();return !!data}
 async function msgSignIn(email,pw){
+  dropOAuth();
   const {data,error}=await mb.auth.signInWithPassword({email,password:pw});
   if(error)return{ok:false,reason:'invalid',msg:error.message};
   if(!(await approved(data.user.id))){await mb.auth.signOut({scope:'local'});return{ok:false,reason:'unconfirmed',msg:'Your HorizenMessages account isn\u2019t confirmed yet. Check your email.'}}
@@ -1404,12 +1422,21 @@ async function login(){
   showToast('You\u2019ll get message and call popups now','Messages','💬');
   if(!horizenAccount)await linkHorizenAccount(r.user);
 }
-async function logout(quiet){await mb.auth.signOut();teardown();if(!quiet)showToast('Signed out of Messages','Messages','👋')}
+async function logout(quiet){if(oauthTok)dropOAuth();else await mb.auth.signOut();teardown();if(!quiet)showToast('Signed out of Messages','Messages','👋')}
 
 mb.auth.onAuthStateChange(e=>{if(e==='SIGNED_OUT'&&started)teardown()});
 async function init(){
   paintMenu();
   await oauthFinish();
+  if(!started){
+    const sv=JSON.parse(localStorage.getItem(TOK_KEY)||'null');
+    if(sv&&sv.user){
+      oauthTok=sv;useOAuthClient();
+      if(await tokenFn()){await startBridge(sv.user);if(!horizenAccount)await linkHorizenAccount({id:sv.user.id,email:sv.user.email,name:''});}
+      else dropOAuth();
+    }
+  }
+  if(started)return;
   const {data:{session}}=await mb.auth.getSession();
   if(!session)return;
   if(await approved(session.user.id)){await startBridge(session.user);if(!horizenAccount)await linkHorizenAccount(session.user);}else await mb.auth.signOut({scope:'local'});
@@ -1439,15 +1466,19 @@ async function oauthFinish(){
     const u=await(await fetch(MSG_URL+'/auth/v1/oauth/userinfo',{headers:{Authorization:'Bearer '+t.access_token}})).json();
     if(!u.email)throw new Error('HorizenMessages did not share your email');
     if(u.email_verified===false)throw new Error('Your HorizenMessages email isn\u2019t verified');
+    if(started)teardown();
+    saveTok(t,{id:u.sub,email:u.email});useOAuthClient();await startBridge({id:u.sub,email:u.email});
     await linkHorizenAccount({id:u.sub,email:u.email,name:u.name});
   }catch(e){showToast(e.message,'HorizenMessages','⚠️')}
 }
-(function addOAuthButton(){
-  const actions=document.querySelector('#horizen-signin-modal .modal-actions');if(!actions)return;
-  const b=document.createElement('button');b.type='button';
-  b.style.cssText='width:100%;margin-top:14px;padding:12px;border-radius:12px;border:1px solid rgba(0,235,132,.4);background:rgba(0,235,132,.12);color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit';
-  b.innerHTML='<i class="fas fa-comments"></i> Log in with HorizenMessages';
-  b.onclick=oauthStart;actions.parentNode.insertBefore(b,actions);
+(function addOAuthButtons(){
+  ['#horizen-signin-modal','#mb-login-modal'].forEach(sel=>{
+    const actions=document.querySelector(sel+' .modal-actions');if(!actions)return;
+    const b=document.createElement('button');b.type='button';
+    b.style.cssText='width:100%;margin-top:14px;padding:12px;border-radius:12px;border:1px solid rgba(0,235,132,.4);background:rgba(0,235,132,.12);color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit';
+    b.innerHTML='<i class="fas fa-comments"></i> Log in with HorizenMessages';
+    b.onclick=oauthStart;actions.parentNode.insertBefore(b,actions);
+  });
 })();
 
 /* ---------- Horizen Sign-In now uses HorizenMessages accounts ---------- */
