@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Horizen OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ===== HORIZENSEARCH ROOT ===== */
+:root{--bg:#050505;--nav:#121212;--accent:#00eb84;--card:rgba(20,20,20,0.95);--text:#fff;--border:#333;--glass:rgba(18,18,18,0.92)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;background-size:cover;background-position:center;background-attachment:fixed}
+body::before{content:'';position:fixed;inset:0;background:rgba(5,5,5,0.6);z-index:0;pointer-events:none}
+body>*{position:relative;z-index:1}
+
+/* ===== TAB BAR ===== */
+#tab-bar{background:var(--glass);backdrop-filter:blur(12px);display:flex;padding:6px 10px 0;gap:5px;border-bottom:1px solid var(--border);min-height:38px;flex-wrap:wrap;align-items:flex-end}
+.tab{background:rgba(255,255,255,0.04);padding:7px 12px;border-radius:8px 8px 0 0;font-size:12px;cursor:grab;border:1px solid transparent;border-bottom:none;color:#777;min-width:90px;max-width:180px;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;transition:.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab:hover{background:rgba(255,255,255,0.07);color:#bbb}
+.tab.active{background:rgba(5,5,5,0.8);border-color:var(--accent);color:var(--accent);font-weight:700}
+.tab.dragging{opacity:.4}
+.close-tab{font-weight:700;opacity:.4;cursor:pointer;font-size:14px;flex-shrink:0}
+.close-tab:hover{opacity:1;color:#ff4444}
+.tab-label{overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+#add-win-btn{background:rgba(255,255,255,0.06);border:1px dashed var(--border);color:#555;padding:7px 12px;border-radius:8px 8px 0 0;font-size:12px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:4px}
+#add-win-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,235,132,0.08)}
+
+/* ===== NAV TOOLS ===== */
+#nav-tools{background:var(--glass);backdrop-filter:blur(12px);padding:8px 10px;display:flex;gap:8px;border-bottom:1px solid var(--border);align-items:center}
+.nav-btn{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:#ccc;width:36px;height:36px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:.15s;flex-shrink:0}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,235,132,0.08)}
+#addr-bar-wrap{flex:1;position:relative}
+#addr-bar{width:100%;padding:9px 16px;border-radius:20px;border:1px solid var(--border);background:rgba(26,26,26,0.9);color:#fff;outline:none;font-size:13px;transition:.2s}
+#addr-bar:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,235,132,0.15)}
+#search-suggestions-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:rgba(14,14,14,0.98);border:1px solid rgba(0,235,132,0.25);border-radius:12px;z-index:50000;display:none;max-height:260px;overflow-y:auto;backdrop-filter:blur(20px);box-shadow:0 10px 40px rgba(0,0,0,0.8)}
+.suggestion-item{padding:10px 16px;cursor:pointer;font-size:13px;color:#ccc;display:flex;align-items:center;gap:10px;transition:.1s}
+.suggestion-item:hover{background:rgba(0,235,132,0.1);color:var(--accent)}
+
+/* ===== STATUS BAR ===== */
+#status-bar{display:flex;gap:6px;padding:0 4px;font-size:13px;color:#aaa;font-weight:500;white-space:nowrap;align-items:center;flex-shrink:0}
+.status-item{display:flex;align-items:center;gap:5px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:.15s}
+.status-item:hover{background:rgba(255,255,255,0.06);color:#fff}
+#time{color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums}
+.status-btn{background:none;border:none;color:inherit;cursor:pointer;font-size:13px;font-family:inherit;font-weight:inherit;display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:8px;transition:.15s}
+.status-btn:hover{background:rgba(255,255,255,0.06);color:#fff}
+
+/* ===== VIEWPORT ===== */
+#viewport{flex:1;position:relative;overflow:hidden}
+.view-pane{position:absolute;inset:0;display:none}
+.view-pane.active{display:block}
+iframe{width:100%;height:100%;border:none;background:#0a0a0a}
+
+/* ===== HOME VIEW ===== */
+#home-view{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;height:100%;padding-top:7vh;overflow-y:auto;background:radial-gradient(ellipse at top,rgba(0,235,132,0.06),transparent 50%)}
+.logo{font-size:4.5rem;font-weight:900;color:var(--accent);letter-spacing:-4px;text-shadow:0 0 40px rgba(0,235,132,0.25);line-height:1;font-family:'Inter',sans-serif}
+.logo-sub{font-size:13px;color:#555;letter-spacing:6px;text-transform:uppercase;margin-top:4px}
+.mid-search{width:90%;max-width:560px;background:var(--card);padding:6px 6px 6px 18px;border-radius:50px;border:1px solid var(--border);display:flex;gap:8px;margin-top:22px;align-items:center;transition:.2s;position:relative}
+.mid-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,235,132,0.1)}
+.mid-search input{flex:1;background:none;border:none;color:#fff;outline:none;font-size:15px;padding:8px 0}
+#home-suggestions{position:absolute;top:calc(100% + 8px);left:0;right:0;background:rgba(14,14,14,0.98);border:1px solid rgba(0,235,132,0.25);border-radius:14px;z-index:50000;display:none;max-height:260px;overflow-y:auto;backdrop-filter:blur(20px);box-shadow:0 10px 40px rgba(0,0,0,0.8)}
+.search-btn{background:var(--accent);color:#000;border:none;padding:10px 18px;border-radius:50px;font-weight:700;cursor:pointer;font-size:13px;transition:.15s;white-space:nowrap}
+.search-btn:hover{filter:brightness(1.15);transform:scale(1.03)}
+.popular-section{margin-top:24px;width:90%;max-width:750px;text-align:center;margin-bottom:16px}
+.popular-title{font-size:11px;color:#555;margin-bottom:12px;text-transform:uppercase;letter-spacing:1.5px}
+.popular-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.popular-link{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);padding:9px 16px;border-radius:12px;color:#bbb;text-decoration:none;font-size:13px;font-weight:500;transition:.2s;cursor:pointer;display:flex;align-items:center;gap:8px}
+.popular-link:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,235,132,0.06);transform:translateY(-2px);box-shadow:0 4px 15px rgba(0,235,132,0.1)}
+
+/* ===== SEARCH RESULTS ===== */
+.results-wrapper{max-width:960px;margin:0 auto;padding:20px;height:100%;overflow-y:auto}
+.filter-bar{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.filter-btn{background:none;border:none;padding:11px 16px;font-size:13px;color:#777;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;transition:.15s}
+.filter-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.content-section{display:none}
+.content-section.active{display:block}
+.ai-overview-box{background:rgba(18,21,28,0.9);border:1px solid #2a2e3a;border-radius:16px;overflow:hidden}
+.ai-overview-header{padding:13px 18px;background:rgba(26,30,40,0.8);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--accent);border-bottom:1px solid #2a2e3a}
+.ai-overview-content{padding:18px;min-height:80px;color:#bbb;line-height:1.7;white-space:pre-wrap;font-size:14px}
+.image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.image-grid img{width:100%;height:130px;object-fit:cover;border-radius:10px;cursor:pointer;transition:.2s;border:1px solid rgba(255,255,255,0.05)}
+.image-grid img:hover{transform:scale(1.03);border-color:var(--accent)}
+
+/* ===== SEARCH: WEBSITES & VIDEOS ===== */
+.website-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.website-card{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px;cursor:pointer;transition:.2s}
+.website-card:hover{border-color:var(--accent);background:rgba(0,235,132,0.05);transform:translateY(-2px)}
+.wc-icon{width:38px;height:38px;border-radius:10px;background:rgba(0,235,132,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.wc-icon img{width:20px;height:20px;border-radius:4px}
+.wc-body{flex:1;min-width:0}
+.wc-title{font-size:14px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wc-url{font-size:11px;color:var(--accent);margin:2px 0 4px}
+.wc-desc{font-size:12px;color:#999;line-height:1.5}
+.video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.video-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:.2s}
+.video-card:hover{border-color:var(--accent);transform:translateY(-3px)}
+.video-card img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#111}
+.vc-info{padding:10px 12px}
+.vc-title{font-size:13px;font-weight:600;color:#fff;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vc-channel{font-size:11px;color:#888;margin-top:4px}
+#video-player-box{display:none;aspect-ratio:16/9;width:100%;max-width:860px;margin:0 auto 18px;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:#000}
+#video-player-box iframe{width:100%;height:100%;border:0}
+.videos-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+
+/* ===== APP STORE ===== */
+.store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.store-card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:14px;cursor:pointer;transition:.2s}
+.store-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.store-card img{width:100%;height:110px;object-fit:cover;border-radius:12px;background:#111;margin-bottom:10px}
+.store-card h3{margin:0 0 5px;font-size:15px;color:#fff}
+.store-card p{margin:0 0 8px;font-size:12px;color:#999;line-height:1.5}
+.meta-line{font-size:11px;color:#666}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;bottom:24px;right:24px;background:rgba(14,14,14,0.97);border:1px solid rgba(0,235,132,0.3);color:#ddd;padding:12px 18px;border-radius:14px;font-size:13px;z-index:70000;opacity:0;transition:.3s;pointer-events:none;backdrop-filter:blur(10px);max-width:320px;box-shadow:0 8px 30px rgba(0,0,0,0.6);display:flex;align-items:flex-start;gap:10px;transform:translateY(10px)}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.toast-body{}
+.toast-title{font-weight:700;font-size:12px;color:var(--accent);margin-bottom:2px}
+.toast-msg{font-size:12px;color:#aaa;line-height:1.4}
+
+/* ===== CONTEXT MENU ===== */
+#context-menu{position:fixed;display:none;background:rgba(14,14,14,0.97);border:1px solid rgba(0,235,132,0.3);border-radius:12px;z-index:30000;padding:5px 0;box-shadow:0 12px 40px rgba(0,0,0,0.9);min-width:200px;backdrop-filter:blur(20px)}
+.menu-item{padding:10px 18px;cursor:pointer;font-size:13px;color:#ddd;display:flex;align-items:center;gap:10px;transition:.1s}
+.menu-item:hover{background:var(--accent);color:#000}
+.menu-divider{height:1px;background:rgba(255,255,255,0.08);margin:4px 0}
+
+/* ===== WALLPAPER PICKER ===== */
+.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:19999;display:none}
+.panel-overlay.show{display:block}
+#wp-picker{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:85%;max-width:720px;height:70vh;background:rgba(12,12,12,0.97);border:1px solid rgba(0,235,132,0.3);border-radius:20px;display:none;flex-direction:column;padding:22px;z-index:20002;backdrop-filter:blur(30px);box-shadow:0 20px 60px rgba(0,0,0,0.8)}
+#wp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;overflow-y:auto;margin-top:12px;flex:1}
+.wp-item{width:100%;height:85px;border-radius:10px;cursor:pointer;object-fit:cover;border:2px solid transparent;transition:.2s}
+.wp-item:hover{border-color:var(--accent);transform:scale(1.04)}
+
+/* ===== HISTORY PANEL ===== */
+#history-panel{position:fixed;top:0;right:-380px;width:370px;height:100vh;background:rgba(10,10,10,0.97);border-left:1px solid var(--border);z-index:20001;display:flex;flex-direction:column;transition:right .3s ease;backdrop-filter:blur(20px)}
+#history-panel.open{right:0}
+.history-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.history-list{flex:1;overflow-y:auto;padding:10px}
+.history-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:.15s;margin-bottom:4px}
+.history-item:hover{background:rgba(255,255,255,0.06)}
+.history-item .hi-icon{color:#555;font-size:14px;width:20px;text-align:center}
+.history-item .hi-info{flex:1;overflow:hidden}
+.history-item .hi-name{font-size:13px;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-item .hi-url{font-size:11px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-item .hi-time{font-size:11px;color:#555;flex-shrink:0}
+.history-footer{padding:12px 20px;border-top:1px solid var(--border)}
+
+/* ===== BOT PANEL ===== */
+#bot-btn{position:fixed;bottom:20px;left:20px;width:50px;height:50px;border-radius:50%;background:var(--accent);color:#000;border:none;cursor:pointer;font-size:22px;z-index:15000;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,235,132,0.35);transition:.2s}
+#bot-btn:hover{transform:scale(1.1);box-shadow:0 6px 30px rgba(0,235,132,0.5)}
+#bot-panel{position:fixed;bottom:80px;left:20px;width:360px;max-height:500px;background:rgba(12,12,12,0.97);border:1px solid rgba(0,235,132,0.3);border-radius:18px;z-index:15000;display:none;flex-direction:column;overflow:hidden;box-shadow:0 15px 50px rgba(0,0,0,0.8);backdrop-filter:blur(20px)}
+#bot-panel.open{display:flex}
+.bot-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px}
+.bot-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.bot-messages{flex:1;overflow-y:auto;padding:14px;max-height:340px;display:flex;flex-direction:column;gap:10px}
+.bot-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;word-break:break-word}
+.bot-msg.bot{background:rgba(0,235,132,0.12);color:#ddd;align-self:flex-start;border-bottom-left-radius:4px}
+.bot-msg.user{background:rgba(255,255,255,0.08);color:#ccc;align-self:flex-end;border-bottom-right-radius:4px}
+.bot-msg.bot .typing-dots span{display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;margin:0 2px;animation:bounce .6s infinite alternate}
+.bot-msg.bot .typing-dots span:nth-child(2){animation-delay:.15s}
+.bot-msg.bot .typing-dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{to{transform:translateY(-4px);opacity:.5}}
+.bot-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border)}
+.bot-input-row input{flex:1;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:20px;padding:9px 14px;color:#fff;outline:none;font-size:13px}
+.bot-input-row input:focus{border-color:var(--accent)}
+.bot-input-row button{background:var(--accent);color:#000;border:none;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;transition:.15s}
+
+/* ===== WIFI PANEL ===== */
+#wifi-panel{position:fixed;top:56px;right:10px;width:340px;background:rgba(10,10,10,0.97);border:1px solid rgba(0,235,132,0.25);border-radius:18px;z-index:18000;display:none;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.8);backdrop-filter:blur(20px)}
+#wifi-panel.open{display:flex}
+.wifi-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.wifi-tabs{display:flex;border-bottom:1px solid var(--border)}
+.wifi-tab{flex:1;padding:10px;text-align:center;font-size:12px;color:#777;cursor:pointer;border-bottom:2px solid transparent;transition:.15s;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.wifi-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.wifi-body{padding:14px;overflow-y:auto;max-height:350px}
+.speed-test-box{text-align:center;padding:20px 10px}
+.speed-big{font-size:52px;font-weight:900;color:var(--accent);line-height:1;margin:16px 0 4px}
+.speed-label{font-size:12px;color:#666;text-transform:uppercase;letter-spacing:1px}
+.speed-details{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.speed-card{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:14px}
+.speed-card .sv{font-size:20px;font-weight:700;color:#fff}
+.speed-card .sk{font-size:11px;color:#666;margin-top:2px}
+.speed-btn{background:var(--accent);color:#000;border:none;padding:12px 32px;border-radius:30px;font-weight:700;font-size:14px;cursor:pointer;margin-top:18px;transition:.2s}
+.speed-btn:hover{transform:scale(1.04)}
+.speed-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.wifi-network{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;cursor:pointer;transition:.15s;margin-bottom:4px}
+.wifi-network.connected{background:rgba(0,235,132,0.08);border:1px solid rgba(0,235,132,0.2)}
+.wifi-network .wn-name{font-size:13px;color:#ddd}
+.wifi-network .wn-detail{font-size:11px;color:#666}
+
+/* ===== WEATHER ===== */
+.weather-dropdown{position:absolute;top:50px;width:min(480px,88vw);max-height:420px;overflow:auto;background:rgba(10,10,10,0.97);border:1px solid rgba(0,235,132,0.25);border-radius:16px;box-shadow:0 15px 50px rgba(0,0,0,0.7);display:none;z-index:19000;backdrop-filter:blur(20px)}
+.weather-hero{padding:20px;display:flex;align-items:center;gap:18px;border-bottom:1px solid var(--border)}
+.weather-hero-temp{font-size:42px;font-weight:900;color:#fff;line-height:1}
+.weather-hero-desc{font-size:14px;color:#aaa;margin-top:2px}
+.weather-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px}
+.weather-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px}
+.weather-card .v{color:var(--accent);font-weight:700;font-size:16px}
+.weather-card .k{color:#666;font-size:10px;text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
+
+/* ===== MODALS ===== */
+.modal-base{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.modal-base.open{display:flex}
+.modal-card{background:rgba(12,12,12,0.98);border:1px solid rgba(0,235,132,0.3);border-radius:20px;padding:28px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.9)}
+.modal-card h3{font-size:18px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.modal-sub{font-size:12px;color:#666;margin-bottom:20px}
+.form-field{margin-bottom:14px}
+.form-field label{display:block;font-size:11px;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.form-field input{width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;outline:none;font-size:14px;transition:.2s;font-family:inherit}
+.form-field input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,235,132,0.15)}
+.form-error{color:#ff4d6a;font-size:12px;margin-top:8px;display:none;text-align:center}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.modal-actions button{flex:1;padding:12px;border-radius:12px;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit}
+.btn-cancel{background:rgba(255,255,255,0.06);color:#ccc;border:1px solid var(--border)!important}
+.btn-cancel:hover{background:rgba(255,255,255,0.1);color:#fff}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{filter:brightness(1.15);transform:scale(1.02)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.auth-tabs-row{display:flex;gap:4px;background:rgba(255,255,255,0.04);border-radius:10px;padding:4px;margin-bottom:20px}
+.auth-tab-btn{flex:1;padding:8px;border:none;background:transparent;color:#777;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;transition:.15s}
+.auth-tab-btn.active{background:var(--accent);color:#000}
+
+/* ===== FINGERPRINT DISPLAY ===== */
+#hz-addr-display{position:fixed;bottom:14px;right:14px;background:rgba(10,10,10,0.85);border:1px solid #2a2a2a;border-radius:8px;padding:7px 12px;font-family:'Courier New',monospace;font-size:11px;color:#555;z-index:9999;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:6px}
+#hz-addr-display:hover{color:var(--accent);border-color:var(--accent)}
+#fp-popup{position:fixed;bottom:50px;right:14px;width:240px;background:rgba(10,10,10,0.97);border:1px solid rgba(0,235,132,0.25);border-radius:14px;z-index:20000;display:none;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.8);backdrop-filter:blur(20px)}
+#fp-popup.open{display:flex}
+.fp-popup-item{padding:12px 16px;cursor:pointer;font-size:13px;color:#ccc;display:flex;align-items:center;gap:10px;transition:.15s;border-bottom:1px solid rgba(255,255,255,0.04)}
+.fp-popup-item:last-child{border-bottom:none}
+.fp-popup-item:hover{background:rgba(0,235,132,0.1);color:var(--accent)}
+.fp-popup-item i{width:18px;text-align:center;font-size:14px}
+.fp-popup-item .fp-tag{font-size:10px;padding:2px 6px;border-radius:4px;font-weight:800;margin-left:auto}
+.fp-tag-admin{background:rgba(255,77,106,0.2);color:#ff4d6a}
+.fp-tag-horizen{background:rgba(0,235,132,0.2);color:var(--accent)}
+
+/* ===== DEV TOOLS ===== */
+#dev-tools-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:45000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+#dev-tools-modal.open{display:flex}
+.dev-tools-box{width:90%;max-width:800px;max-height:80vh;background:#0d0d0d;border:1px solid #333;border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.dev-tools-header{padding:12px 18px;background:#141414;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center}
+.dev-tools-header span{color:var(--accent);font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.dev-tools-body{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.dev-tools-log{flex:1;overflow-y:auto;padding:10px 14px;font-family:'Courier New',monospace;font-size:12px;color:#aaa;background:#0a0a0a}
+.dev-log-entry{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.dev-log-entry.error{color:#ff4d6a}
+.dev-log-entry.warn{color:#ffb347}
+.dev-log-entry.info{color:#4a9eff}
+.dev-tools-input-row{display:flex;gap:0;border-top:1px solid #333}
+.dev-tools-input-row span{padding:10px 12px;background:#141414;color:#888;font-family:'Courier New',monospace;font-size:12px;display:flex;align-items:center;border-right:1px solid #333}
+.dev-tools-input-row input{flex:1;background:#0a0a0a;border:none;color:#fff;padding:10px 12px;font-family:'Courier New',monospace;font-size:12px;outline:none}
+
+/* ===== NEW WIN MODAL ===== */
+#new-win-modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+#new-win-modal.open{display:flex}
+.new-win-box{background:rgba(12,12,12,0.98);border:1px solid rgba(0,235,132,0.3);border-radius:20px;padding:26px;width:90%;max-width:380px}
+.new-win-box h3{font-size:17px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.new-win-box input{width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;outline:none;font-size:14px;transition:.2s;font-family:inherit;margin-bottom:14px}
+.new-win-box input:focus{border-color:var(--accent)}
+.new-win-actions{display:flex;gap:10px;justify-content:flex-end}
+
+/* ===== ADMIN ===== */
+#admin-login-modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#admin-login-modal.open{display:flex}
+#admin-codes-modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#admin-codes-modal.open{display:flex}
+.codes-box{background:rgba(12,12,12,0.98);border:1px solid rgba(0,235,132,0.3);border-radius:20px;padding:24px;width:90%;max-width:480px;max-height:75vh;display:flex;flex-direction:column}
+.codes-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.code-item{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:12px}
+.code-item:hover{border-color:var(--accent);background:rgba(0,235,132,0.06)}
+.code-item-icon{width:40px;height:40px;border-radius:10px;background:rgba(0,235,132,0.12);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--accent);flex-shrink:0}
+.code-item-info{flex:1;overflow:hidden}
+.code-item-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:2px}
+.code-item-role{font-size:11px;color:#666}
+.role-badge{font-size:9px;padding:3px 8px;border-radius:6px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.role-mod{background:rgba(74,158,255,0.15);color:#4a9eff}
+.role-dev{background:rgba(0,235,132,0.15);color:var(--accent)}
+.role-co-owner{background:rgba(255,149,0,0.15);color:#ff9500}
+.role-owner{background:rgba(255,77,106,0.15);color:#ff4d6a}
+
+/* ===== HORIZEN ACCOUNT PANEL ===== */
+#horizen-account-panel{position:fixed;top:0;right:-420px;width:400px;height:100vh;background:rgba(10,10,10,0.97);border-left:1px solid var(--border);z-index:22000;display:flex;flex-direction:column;transition:right .3s ease;backdrop-filter:blur(20px)}
+#horizen-account-panel.open{right:0}
+.ha-header{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.ha-avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#00a86b);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#000;flex-shrink:0}
+.ha-name{font-size:17px;font-weight:800}
+.ha-email{font-size:12px;color:#666;margin-top:2px}
+.ha-body{flex:1;overflow-y:auto;padding:14px}
+.ha-section{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px}
+.ha-section-title{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.ha-stat{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.ha-stat:last-child{border-bottom:none}
+.ha-stat-label{font-size:13px;color:#aaa}
+.ha-stat-value{font-size:13px;color:var(--accent);font-weight:700}
+.ha-footer{padding:14px;border-top:1px solid var(--border);display:flex;gap:8px}
+
+/* ===== SIGNINS PANEL ===== */
+#signins-panel{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+#signins-panel.open{display:flex}
+
+/* ===== FAMILY LOCK ===== */
+#family-lock-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;display:none;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(20px)}
+#family-lock-overlay.show{display:flex}
+.lock-icon{font-size:60px;margin-bottom:20px}
+.lock-title{font-size:24px;font-weight:800;color:var(--accent);margin-bottom:8px}
+.lock-sub{font-size:14px;color:#888;text-align:center;max-width:300px;line-height:1.6}
+.lock-code-input{margin-top:24px;display:flex;gap:8px}
+.lock-code-input input{padding:11px 16px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:#fff;outline:none;font-size:16px;width:200px;text-align:center;letter-spacing:4px}
+.lock-code-input button{padding:11px 20px;border-radius:12px;border:none;background:var(--accent);color:#000;font-weight:700;cursor:pointer;font-size:13px}
+
+/* ===== SCREEN TIME WARNING ===== */
+#screen-time-warning{position:fixed;bottom:80px;right:20px;background:rgba(255,149,0,0.15);border:1px solid rgba(255,149,0,0.4);border-radius:14px;padding:14px 18px;z-index:40000;display:none;animation:slideInRight .3s ease;max-width:300px}
+#screen-time-warning.show{display:block}
+.stw-title{font-size:13px;font-weight:700;color:#ff9500;margin-bottom:4px}
+.stw-msg{font-size:12px;color:#aaa}
+
+/* ===== ANIMATIONS ===== */
+@keyframes slideInRight{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+
+/* ===== LOCATION ===== */
+.loc-indicator{display:flex;align-items:center;gap:5px;font-size:11px;color:#555;padding:3px 8px;border-radius:6px}
+.loc-indicator.tracking{color:var(--accent)}
+.loc-indicator .loc-dot{width:6px;height:6px;border-radius:50%;background:#555}
+.loc-indicator.tracking .loc-dot{background:var(--accent);animation:pulse 2s infinite}
+
+@media(max-width:600px){
+  .logo{font-size:3rem}
+  #bot-panel{width:calc(100vw - 40px);left:10px;bottom:70px}
+  #horizen-account-panel{width:100vw;right:-100vw}
+  #wifi-panel{width:calc(100vw - 20px);right:10px}
+}
+</style>
+</head>
+<body oncontextmenu="handleGlobalContextMenu(event)">
+
+<!-- FAMILY LOCK -->
+<div id="family-lock-overlay">
+  <div class="lock-icon">🔒</div>
+  <div class="lock-title">Browser Locked</div>
+  <div class="lock-sub">Your parent has locked Horizon OS. Enter the unlock code or ask your parent to unlock it.</div>
+  <div class="lock-code-input">
+    <input type="password" id="lock-code-input" placeholder="Unlock code" maxlength="20">
+    <button onclick="tryUnlockBrowser()">Unlock</button>
+  </div>
+</div>
+
+<!-- SCREEN TIME WARNING -->
+<div id="screen-time-warning">
+  <div class="stw-title">⚠️ Screen Time Limit</div>
+  <div class="stw-msg" id="stw-msg">You have 10 minutes remaining today.</div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="context-menu">
+  <div class="menu-item" onclick="toggleWPPicker()"><i class="fas fa-image"></i> Change Wallpaper</div>
+  <div class="menu-item" onclick="resetBG()"><i class="fas fa-undo"></i> Reset Wallpaper</div>
+  <div class="menu-divider"></div>
+  <div class="menu-item" onclick="openDevTools()"><i class="fas fa-code"></i> Developer Tools</div>
+  <div class="menu-divider"></div>
+  <div class="menu-item" onclick="location.reload()"><i class="fas fa-power-off"></i> Restart OS</div>
+</div>
+
+<!-- DEV TOOLS -->
+<div id="dev-tools-modal">
+  <div class="dev-tools-box">
+    <div class="dev-tools-header">
+      <span><i class="fas fa-terminal"></i> Developer Tools</span>
+      <button class="nav-btn" onclick="closeDevTools()" style="width:30px;height:30px;font-size:12px;"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="dev-tools-body">
+      <div class="dev-tools-log" id="dev-log"></div>
+      <div class="dev-tools-input-row">
+        <span>&gt;</span>
+        <input type="text" id="dev-cmd-input" placeholder="Execute JavaScript..." onkeypress="if(event.key==='Enter')execDevCmd()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW WIN MODAL -->
+<div id="new-win-modal">
+  <div class="new-win-box">
+    <h3><i class="fas fa-window-restore" style="color:var(--accent);"></i> New Window</h3>
+    <input type="text" id="new-win-name-input" placeholder="Enter window name..." maxlength="30" onkeypress="if(event.key==='Enter')confirmNewWindow()">
+    <div class="new-win-actions">
+      <button class="btn-cancel" style="flex:none;padding:10px 20px;" onclick="closeNewWinModal()">Cancel</button>
+      <button class="btn-primary" style="flex:none;padding:10px 20px;" onclick="confirmNewWindow()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- FINGERPRINT -->
+<div id="hz-addr-display" onclick="toggleFPPopup()" title="Click for options">
+  <i class="fas fa-fingerprint"></i>
+  <span id="hz-addr-text">Loading...</span>
+</div>
+<div id="fp-popup">
+  <div class="fp-popup-item" onclick="copyAddress()"><i class="fas fa-copy"></i> Copy Fingerprint</div>
+  <div class="fp-popup-item" onclick="openHorizenSignIn()" id="fp-horizen-btn"><i class="fas fa-user-circle"></i> Horizen Sign-In <span class="fp-tag fp-tag-horizen" id="fp-horizen-tag" style="display:none">●</span></div>
+  <div class="fp-popup-item" onclick="openAdminLogin()" id="fp-admin-btn"><i class="fas fa-shield-halved"></i> Admin Sign-In <span class="fp-tag fp-tag-admin" id="fp-admin-tag" style="display:none">●</span></div>
+  <div class="fp-popup-item" onclick="openSignInsPanel()"><i class="fas fa-users"></i> Sign-In's</div>
+</div>
+
+<!-- HORIZEN SIGN-IN MODAL -->
+<div id="horizen-signin-modal" class="modal-base">
+  <div class="modal-card" style="max-width:420px">
+    <h3><i class="fas fa-user-circle" style="color:var(--accent);"></i> Horizen Sign-In</h3>
+    <div class="modal-sub">Your Horizen account — saves your settings & preferences</div>
+    <div class="auth-tabs-row">
+      <button class="auth-tab-btn active" id="hs-tab-login" onclick="switchHorizenTab('login')">Sign In</button>
+      <button class="auth-tab-btn" id="hs-tab-signup" onclick="switchHorizenTab('signup')">Create Account</button>
+    </div>
+    <div id="hs-login-form">
+      <div class="form-field"><label>Username or Email</label><input type="text" id="hs-login-id" placeholder="yourname or you@email.com"></div>
+      <div class="form-field"><label>Password</label><input type="password" id="hs-login-pass" placeholder="••••••••" onkeypress="if(event.key==='Enter')doHorizenLogin()"></div>
+    </div>
+    <div id="hs-signup-form" style="display:none">
+      <div class="form-field"><label>Username</label><input type="text" id="hs-signup-username" placeholder="yourname"></div>
+      <div class="form-field"><label>Email</label><input type="email" id="hs-signup-email" placeholder="you@email.com"></div>
+      <div class="form-field"><label>Password</label><input type="password" id="hs-signup-pass" placeholder="••••••••" onkeypress="if(event.key==='Enter')doHorizenSignup()"></div>
+      <div class="form-field"><label>Display Name</label><input type="text" id="hs-signup-display" placeholder="Your Name"></div>
+    </div>
+    <div class="form-error" id="hs-error"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeHorizenSignIn()">Cancel</button>
+      <button class="btn-primary" id="hs-submit-btn" onclick="doHorizenAuth()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div id="admin-login-modal">
+  <div class="modal-card">
+    <h3><i class="fas fa-shield-halved" style="color:var(--accent);"></i> Admin Sign In</h3>
+    <div class="modal-sub">Sign in to access role-specific codes and tools</div>
+    <div class="form-field"><label>Username</label><input type="text" id="admin-user" placeholder="Enter username" autocomplete="off"></div>
+    <div class="form-field"><label>Password</label><input type="password" id="admin-pass" placeholder="Enter password" onkeypress="if(event.key==='Enter')doAdminLogin()"></div>
+    <div class="form-error" id="login-error">Invalid username or password</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAdminLogin()">Cancel</button>
+      <button class="btn-primary" id="login-submit-btn" onclick="doAdminLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN CODES MODAL -->
+<div id="admin-codes-modal">
+  <div class="codes-box">
+    <h3 id="codes-modal-title" style="font-size:17px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px;"><i class="fas fa-code" style="color:var(--accent);"></i> Codes</h3>
+    <div style="font-size:12px;color:#666;margin-bottom:16px;" id="codes-modal-sub">Select a code to open</div>
+    <div class="codes-list" id="codes-list"></div>
+    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+      <button class="btn-cancel" onclick="closeCodesModal()" style="flex:none;padding:10px 24px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNINS PANEL -->
+<div id="signins-panel" class="modal-base">
+  <div class="modal-card" style="max-width:480px;max-height:80vh;display:flex;flex-direction:column;">
+    <h3 style="margin-bottom:4px;"><i class="fas fa-users" style="color:var(--accent);"></i> Sign-In's</h3>
+    <div class="modal-sub">Manage all accounts connected to this device</div>
+    <div style="flex:1;overflow-y:auto;" id="signins-body"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-cancel" onclick="closeSignInsPanel()">Close</button>
+      <button class="btn-primary" onclick="openHorizenSignIn();closeSignInsPanel()"><i class="fas fa-plus"></i> Add Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- HORIZEN ACCOUNT PANEL -->
+<div class="panel-overlay" id="ha-overlay" onclick="closeHorizenAccountPanel()"></div>
+<div id="horizen-account-panel">
+  <div class="ha-header">
+    <div class="ha-avatar" id="ha-avatar">?</div>
+    <div>
+      <div class="ha-name" id="ha-name">Loading...</div>
+      <div class="ha-email" id="ha-email"></div>
+    </div>
+    <button class="nav-btn" onclick="closeHorizenAccountPanel()" style="width:30px;height:30px;font-size:12px;margin-left:auto;"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="ha-body" id="ha-body">
+    <div class="ha-section">
+      <div class="ha-section-title"><i class="fas fa-chart-bar"></i> Today's Stats</div>
+      <div class="ha-stat"><span class="ha-stat-label">Screen Time</span><span class="ha-stat-value" id="ha-screentime">0 min</span></div>
+      <div class="ha-stat"><span class="ha-stat-label">Searches</span><span class="ha-stat-value" id="ha-searches">0</span></div>
+      <div class="ha-stat"><span class="ha-stat-label">Apps Opened</span><span class="ha-stat-value" id="ha-apps">0</span></div>
+    </div>
+    <div class="ha-section">
+      <div class="ha-section-title"><i class="fas fa-shield-halved"></i> Family Status</div>
+      <div id="ha-family-info" style="color:#888;font-size:13px;">Not connected to a family</div>
+    </div>
+  </div>
+  <div class="ha-footer">
+    <button class="speed-btn" style="flex:1;padding:10px;margin:0;font-size:12px;background:rgba(0,235,132,0.12);color:var(--accent);border:1px solid rgba(0,235,132,0.3);" onclick="doHorizenLogout()"><i class="fas fa-right-from-bracket"></i> Sign Out</button>
+    <button class="speed-btn" style="flex:1;padding:10px;margin:0;font-size:12px;" onclick="openHorizenFamily()"><i class="fas fa-users"></i> HorizenFamily</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <div class="toast-icon" id="toast-icon">🔔</div>
+  <div class="toast-body">
+    <div class="toast-title" id="toast-title">Notification</div>
+    <div class="toast-msg" id="toast-msg"></div>
+  </div>
+</div>
+
+<!-- HISTORY PANEL -->
+<div class="panel-overlay" id="history-overlay" onclick="toggleHistory()"></div>
+<div id="history-panel">
+  <div class="history-header">
+    <h3 style="font-size:16px;font-weight:700;"><i class="fas fa-clock-rotate-left" style="color:var(--accent);margin-right:6px;"></i> History</h3>
+    <button class="nav-btn" onclick="toggleHistory()" style="width:30px;height:30px;font-size:12px;"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="history-list" id="history-list"></div>
+  <div class="history-footer">
+    <button class="speed-btn" style="width:100%;padding:10px;margin-top:0;font-size:12px;" onclick="clearHistory()">Clear All History</button>
+  </div>
+</div>
+
+<!-- BOT -->
+<button id="bot-btn" onclick="toggleBot()"><i class="fas fa-robot"></i></button>
+<div id="bot-panel">
+  <div class="bot-header"><div class="bot-dot"></div> Horizon Assistant</div>
+  <div class="bot-messages" id="bot-messages">
+    <div class="bot-msg bot">Hey! I have full control over Horizon OS. Try: "open [url]", "search [query]", "change wallpaper to [topic]", or ask me anything!</div>
+  </div>
+  <div class="bot-input-row">
+    <input type="text" id="bot-input" placeholder="Ask me anything..." onkeypress="if(event.key==='Enter')sendBot()">
+    <button onclick="sendBot()"><i class="fas fa-arrow-up"></i></button>
+  </div>
+</div>
+
+<!-- WIFI PANEL -->
+<div id="wifi-panel">
+  <div class="wifi-header">
+    <h3 style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;"><i class="fas fa-wifi" style="color:var(--accent);"></i> Network</h3>
+    <button class="nav-btn" onclick="toggleWifi()" style="width:28px;height:28px;font-size:11px;"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="wifi-tabs">
+    <button class="wifi-tab active" onclick="switchWifiTab('networks',this)"><i class="fas fa-wifi"></i> WiFi</button>
+    <button class="wifi-tab" onclick="switchWifiTab('speedtest',this)"><i class="fas fa-gauge-high"></i> Speed</button>
+  </div>
+  <div class="wifi-body" id="wifi-body"></div>
+</div>
+
+<!-- WALLPAPER PICKER -->
+<div class="panel-overlay" id="wp-overlay" onclick="toggleWPPicker()"></div>
+<div id="wp-picker">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <h3 style="font-size:16px;font-weight:700;"><i class="fas fa-palette" style="color:var(--accent);margin-right:8px;"></i> Wallpaper Engine</h3>
+    <button class="nav-btn" onclick="toggleWPPicker()" style="width:30px;height:30px;font-size:12px;"><i class="fas fa-xmark"></i></button>
+  </div>
+  <input type="text" id="wp-search" placeholder="Search wallpapers..." style="width:100%;padding:10px 14px;margin-top:10px;background:rgba(255,255,255,0.06);color:white;border:1px solid var(--border);border-radius:12px;outline:none;font-size:13px;">
+  <div id="wp-grid"></div>
+</div>
+
+<!-- TAB BAR -->
+<div id="tab-bar">
+  <div class="tab active" id="tab-home" onclick="switchTab('home')"><span class="tab-label">Horizon</span></div>
+  <div class="tab" id="tab-results" onclick="switchTab('results')" style="display:none;"><span class="tab-label">Search</span></div>
+  <div class="tab" id="tab-store" onclick="switchTab('store')" style="display:none;"><span class="tab-label">App Store</span></div>
+  <div id="add-win-btn" onclick="openNewWinModal()" title="Open New Window"><i class="fas fa-plus"></i> Window</div>
+</div>
+
+<!-- NAV TOOLS -->
+<div id="nav-tools">
+  <button class="nav-btn" onclick="switchTab('home')" title="Home"><i class="fas fa-house"></i></button>
+  <div id="addr-bar-wrap">
+    <input type="text" id="addr-bar" placeholder="Search Horizon, type a URL..." autocomplete="off">
+    <div id="search-suggestions-dropdown"></div>
+  </div>
+  <button class="nav-btn" onclick="handleTopBar()" style="background:var(--accent);color:#000;border-color:var(--accent);"><i class="fas fa-arrow-right"></i></button>
+  <div id="status-bar">
+    <div class="loc-indicator" id="loc-indicator" title="Location sharing status">
+      <span class="loc-dot"></span>
+      <span id="loc-indicator-text">Loc</span>
+    </div>
+    <button class="status-btn" id="weather-btn" onclick="toggleWeather()" style="position:relative;">
+      <i class="fas fa-sun" id="weather-icon"></i> <span id="weather-temp">--°</span>
+      <div class="weather-dropdown" id="weather-dropdown"></div>
+    </button>
+    <div class="status-item" onclick="toggleWifi()"><i class="fas fa-wifi" id="wifi-icon"></i></div>
+    <div class="status-item" id="battery"><i class="fas fa-battery-full"></i> --%</div>
+    <button class="status-btn" id="role-mode-btn" onclick="openCodesModal()" title="Role Codes" style="display:none;"><i class="fas fa-shield-halved"></i> <span id="role-mode-label">Mode</span></button>
+    <button class="status-btn" onclick="toggleHistory()" title="History"><i class="fas fa-clock-rotate-left"></i></button>
+    <div class="status-item" id="time">00:00</div>
+  </div>
+</div>
+
+<!-- VIEWPORT -->
+<div id="viewport">
+  <!-- HOME VIEW -->
+  <div id="view-home" class="view-pane active">
+    <div id="home-view">
+      <div class="logo">HORIZON</div>
+      <div class="logo-sub">Pro Edition</div>
+      <div class="mid-search">
+        <input type="text" id="search-input" placeholder="Search anything..." autocomplete="off">
+        <div id="home-suggestions"></div>
+        <button class="search-btn" onclick="startVoiceSearch()" title="Voice"><i class="fas fa-microphone"></i></button>
+        <button class="search-btn" onclick="performSearch()">Search</button>
+      </div>
+      <div class="popular-section">
+        <div class="popular-title">Quick Links</div>
+        <div class="popular-grid">
+          <div class="popular-link" onclick="openUrl('https://horizensearch.com','Main Search')"><i class="fas fa-globe"></i> Main Search</div>
+          <div class="popular-link" onclick="openUrl('https://ai.horizensearch.com','Horizen AI')"><i class="fas fa-brain"></i> Horizen AI</div>
+          <div class="popular-link" onclick="openUrl('https://gd.horizensearch.com','Geometry Dash')"><i class="fas fa-gamepad"></i> Geometry Dash</div>
+          <div class="popular-link" onclick="openUrl('https://video.horizensearch.com','Horienvideo')"><i class="fas fa-video"></i> Horienvideo</div>
+          <div class="popular-link" onclick="switchTab('store');loadAppStore();"><i class="fas fa-store"></i> App Store</div>
+          <div class="popular-link" onclick="openUrl('https://family.horizensearch.com','HorizenFamily')"><i class="fas fa-users"></i> Family</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH RESULTS VIEW -->
+  <div id="view-results" class="view-pane">
+    <div class="results-wrapper">
+      <h2 id="search-title" style="color:#888;font-size:15px;margin-bottom:18px;"></h2>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="switchFilter('all',this)">All</button>
+        <button class="filter-btn" onclick="switchFilter('websites',this)">Websites</button>
+        <button class="filter-btn" onclick="switchFilter('images',this)">Images</button>
+        <button class="filter-btn" id="filter-videos" onclick="switchFilter('videos',this)">Videos</button>
+        <button class="filter-btn" onclick="switchFilter('facts',this)">Facts</button>
+      </div>
+      <div id="content-all" class="content-section active">
+        <div class="ai-overview-box">
+          <div class="ai-overview-header"><i class="fas fa-sparkles"></i> AI Overview</div>
+          <div class="ai-overview-content" id="inline-ai-box">Search to load results.</div>
+        </div>
+        <div id="all-websites-preview" class="website-grid" style="margin-top:16px;"></div>
+        <div id="all-images-preview" class="image-grid" style="margin-top:16px;"></div>
+        <div id="all-videos-preview" class="video-grid" style="margin-top:16px;"></div>
+      </div>
+      <div id="content-websites" class="content-section">
+        <div style="font-size:12px;color:#666;margin-bottom:14px;"><i class="fas fa-wand-magic-sparkles" style="color:var(--accent);margin-right:5px;"></i> Websites curated by Horizen AI</div>
+        <div id="websites-grid" class="website-grid"></div>
+      </div>
+      <div id="content-images" class="content-section">
+        <div id="full-images-grid" class="image-grid"></div>
+      </div>
+      <div id="content-videos" class="content-section">
+        <div class="videos-toolbar">
+          <div style="font-size:12px;color:#666;"><i class="fas fa-video" style="color:var(--accent);margin-right:5px;"></i> Videos powered by Horienvideo</div>
+          <button class="search-btn" style="padding:8px 14px;font-size:11px;" onclick="openUrl('https://video.horizensearch.com','Horienvideo')"><i class="fas fa-arrow-up-right-from-square"></i> Open Horienvideo</button>
+        </div>
+        <div id="video-player-box"><iframe id="video-player" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+        <div id="videos-grid" class="video-grid"></div>
+      </div>
+      <div id="content-facts" class="content-section">
+        <div class="ai-overview-box">
+          <div class="ai-overview-header"><i class="fas fa-sparkles"></i> AI Fact Overview</div>
+          <div class="ai-overview-content" id="facts-content">Generating facts...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP STORE VIEW -->
+  <div id="view-store" class="view-pane">
+    <div class="results-wrapper">
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <input id="app-store-search" placeholder="Search apps..." style="flex:1;min-width:200px;padding:10px 14px;border-radius:20px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:white;outline:none;font-size:13px;">
+        <button class="search-btn" onclick="loadAppStore()">Refresh</button>
+      </div>
+      <div class="store-grid" id="app-store-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   CONFIGURATION
+   ================================================================ */
+const HS_SUPABASE_URL='https://xlisbmtenekjmundxbcn.supabase.co';
+const HS_SUPABASE_KEY='sb_publishable_Cvs-AiKPTHrC_tfGfwlpSQ_4Hir5Cva';
+const PEXELS_KEY='QmebQALowGk9LoYQqUGaPhQ5zUMQWwd1mRaFTV4HvNQyYS1i6v9H5V68';
+const HORIZEN_API='https://api.horizensearch.com';
+const HORIZEN_MODEL='horizen-70b';
+const YOUTUBE_API_KEY='AIzaSyDgir7W26YD_PaZjbxU2iWYTZhW4Vf_n84';
+
+const sb=supabase.createClient(HS_SUPABASE_URL,HS_SUPABASE_KEY);
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let openTabs=[],myAddress='',appCache=[],blockPollInterval=null;
+let browsingHistory=JSON.parse(localStorage.getItem('hz_history')||'[]');
+let speedTestRunning=false,wifiTabState='networks';
+let aiSearchCache=JSON.parse(localStorage.getItem('hz_ai_cache')||'{}');
+let currentAdmin=null;
+let horizenAccount=JSON.parse(localStorage.getItem('hz_account')||'null');
+let horizenAuthTab='login';
+let screenTimeInterval=null,screenTimeLimitMinutes=0,todayScreenMinutes=0;
+let familyRestrictions=null,familyLocked=false;
+let locationTrackingEnabled=false,locationTrackingInterval=null,lastLocationSent=null;
+let suggestionTimeout=null;
+
+/* ================================================================
+   UTILITIES
+   ================================================================ */
+function escHtml(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function showToast(msg,title,icon){title=title||'Horizon OS';icon=icon||'🔔';const t=document.getElementById('toast');document.getElementById('toast-title').textContent=title;document.getElementById('toast-msg').textContent=msg;document.getElementById('toast-icon').textContent=icon;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),4000);}
+function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'Just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px'}
+async function sha256(message){const msgBuffer=new TextEncoder().encode(message);const hashBuffer=await crypto.subtle.digest('SHA-256',msgBuffer);return Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+
+/* ===== SEARCH AI CACHE ===== */
+function getSearchCache(key,field){const c=aiSearchCache[key];if(!c)return null;if(typeof c==='string')return field==='overview'?c:null;return c[field]!==undefined?c[field]:null;}
+function setSearchCache(key,field,value){let c=aiSearchCache[key];if(!c||typeof c==='string')c=(typeof c==='string')?{overview:c}:{};c[field]=value;aiSearchCache[key]=c;try{const keys=Object.keys(aiSearchCache);if(keys.length>100)delete aiSearchCache[keys[0]];localStorage.setItem('hz_ai_cache',JSON.stringify(aiSearchCache));}catch(e){}}
+
+/* ================================================================
+   HORIZEN AI (api.horizensearch.com)
+   Powers: AI Overview, Facts, Websites, Assistant
+   ================================================================ */
+/* ================================================================
+   GROQ AI (free tier — get a key at console.groq.com)
+   Key priority: 1) GROQ_KEY constant below  2) Supabase api_keys table
+   ================================================================ */
+const GROQ_KEY='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'; /* ← PASTE YOUR GROQ KEY HERE (gsk_...) for instant fix */
+const GROQ_MODELS=['openai/gpt-oss-120b','qwen/qwen3.6-27b'];
+let groqKeyCache='',groqKeyChecked=false;
+
+async function getGroqKey(){
+  if(groqKeyCache)return groqKeyCache;
+  if(groqKeyChecked)return'';
+  groqKeyChecked=true;
+  /* 1) Hardcoded key (recommended — works instantly) */
+  if(GROQ_KEY&&GROQ_KEY.length>20){groqKeyCache=GROQ_KEY;devLog('Groq key: loaded from code','info');return groqKeyCache;}
+  /* 2) Supabase lookup (with diagnostics) */
+  try{
+    const{data,error}=await sb.from('api_keys').select('key_value,is_active').eq('key_name','groq').maybeSingle();
+    if(error)devLog('Groq key DB error: '+error.message,'warn');
+    else if(!data)devLog('Groq key: no row in api_keys (key_name=groq) — paste a key into GROQ_KEY','warn');
+    else if(!data.is_active)devLog('Groq key: found but is_active=false','warn');
+    else if(data.key_value){groqKeyCache=data.key_value;devLog('Groq key: loaded from Supabase','info');}
+  }catch(e){devLog('Groq key lookup failed: '+e.message,'warn');}
+  return groqKeyCache;
+}
+
+async function getGroqChat(userMsg,sysMsg){
+  const key=await getGroqKey();
+  if(!key)return'Sorry, AI is not configured yet. Get a free key at console.groq.com and paste it into GROQ_KEY in the code.';
+  for(const model of GROQ_MODELS){
+    try{
+      const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body:JSON.stringify({model,messages:[{role:'system',content:sysMsg||'Keep answers short, under 4 sentences.'},{role:'user',content:userMsg}],temperature:0.7})
+      });
+      if(res.status===401)return'AI error: invalid Groq API key — check it at console.groq.com.';
+      if(res.status===429)return'AI error: Groq rate limit hit — try again in a few seconds.';
+      const data=await res.json();
+      if(data?.error){devLog('Groq error ('+model+'): '+data.error.message,'error');continue;}
+      const t=data?.choices?.[0]?.message?.content;
+      if(t)return t;
+    }catch(e){devLog('Groq request failed ('+model+'): '+e.message,'error');}
+  }
+  return'AI request failed.';
+}
+
+async function getHorizenChat(userMsg,sysMsg){return getGroqChat(userMsg,sysMsg);}
+
+/* ================================================================
+   DEV TOOLS
+   ================================================================ */
+function openDevTools(){document.getElementById('context-menu').style.display='none';document.getElementById('dev-tools-modal').classList.add('open');document.getElementById('dev-cmd-input').focus();}
+function closeDevTools(){document.getElementById('dev-tools-modal').classList.remove('open');}
+function devLog(msg,type=''){const log=document.getElementById('dev-log');const d=document.createElement('div');d.className='dev-log-entry '+type;d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;log.appendChild(d);log.scrollTop=log.scrollHeight;}
+function execDevCmd(){const input=document.getElementById('dev-cmd-input');const cmd=input.value.trim();input.value='';if(!cmd)return;devLog('> '+cmd,'info');try{let result=eval(cmd);if(result===undefined)result='undefined';else if(typeof result==='object')result=JSON.stringify(result,null,2);devLog(String(result));}catch(e){devLog('Error: '+e.message,'error');}}
+const origLog=console.log,origErr=console.error,origWarn=console.warn;
+console.log=function(...a){devLog(a.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).join(' '),'info');origLog.apply(console,a);};
+console.error=function(...a){devLog(a.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).join(' '),'error');origErr.apply(console,a);};
+console.warn=function(...a){devLog(a.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).join(' '),'warn');origWarn.apply(console,a);};
+
+/* ================================================================
+   SUGGESTIONS
+   ================================================================ */
+async function fetchSuggestions(q){if(!q||q.length<2)return[];try{const{data}=await sb.from('search_suggestions').select('query,count').ilike('query',q+'%').order('count',{ascending:false}).limit(6);return(data||[]).map(r=>r.query);}catch(e){return[];}}
+async function saveSuggestion(q){if(!q||q.length<2)return;try{const{data:existing}=await sb.from('search_suggestions').select('id,count').ilike('query',q).maybeSingle();if(existing)await sb.from('search_suggestions').update({count:existing.count+1}).eq('id',existing.id);else await sb.from('search_suggestions').insert({query:q.toLowerCase(),count:1});}catch(e){}}
+function renderSuggestionDropdown(suggestions,inputId,dropdownId){const dd=document.getElementById(dropdownId);if(!suggestions.length){dd.style.display='none';return;}dd.innerHTML=suggestions.map(s=>`<div class="suggestion-item" onclick="pickSuggestion('${s.replace(/'/g,"\\'")}','${inputId}')"><i class="fas fa-magnifying-glass"></i>${escHtml(s)}</div>`).join('');dd.style.display='block';}
+function pickSuggestion(q,inputId){document.getElementById(inputId).value=q;document.getElementById('search-suggestions-dropdown').style.display='none';document.getElementById('home-suggestions').style.display='none';if(inputId==='addr-bar')handleTopBar();else performSearch(q);}
+document.getElementById('addr-bar').addEventListener('input',function(){clearTimeout(suggestionTimeout);const q=this.value.trim();if(!q||q.includes('.')){document.getElementById('search-suggestions-dropdown').style.display='none';return;}suggestionTimeout=setTimeout(async()=>{renderSuggestionDropdown(await fetchSuggestions(q),'addr-bar','search-suggestions-dropdown');},200);});
+document.getElementById('search-input').addEventListener('input',function(){clearTimeout(suggestionTimeout);const q=this.value.trim();if(!q){document.getElementById('home-suggestions').style.display='none';return;}suggestionTimeout=setTimeout(async()=>{const s=await fetchSuggestions(q);const dd=document.getElementById('home-suggestions');if(!s.length){dd.style.display='none';return;}dd.innerHTML=s.map(sg=>`<div class="suggestion-item" onclick="pickSuggestion('${sg.replace(/'/g,"\\'")}','search-input')"><i class="fas fa-magnifying-glass"></i>${escHtml(sg)}</div>`).join('');dd.style.display='block';},200);});
+document.addEventListener('click',e=>{if(!e.target.closest('#addr-bar-wrap'))document.getElementById('search-suggestions-dropdown').style.display='none';if(!e.target.closest('.mid-search'))document.getElementById('home-suggestions').style.display='none';if(!e.target.closest('#hz-addr-display')&&!e.target.closest('#fp-popup'))document.getElementById('fp-popup').classList.remove('open');if(!e.target.closest('#weather-btn')&&!e.target.closest('.weather-dropdown'))document.getElementById('weather-dropdown').style.display='none';});
+
+/* ================================================================
+   HORIZEN SIGN-IN
+   ================================================================ */
+function openHorizenSignIn(){document.getElementById('fp-popup').classList.remove('open');if(horizenAccount){openHorizenAccountPanel();return;}document.getElementById('horizen-signin-modal').classList.add('open');switchHorizenTab('login');}
+function closeHorizenSignIn(){document.getElementById('horizen-signin-modal').classList.remove('open');}
+function switchHorizenTab(tab){horizenAuthTab=tab;document.getElementById('hs-tab-login').classList.toggle('active',tab==='login');document.getElementById('hs-tab-signup').classList.toggle('active',tab==='signup');document.getElementById('hs-login-form').style.display=tab==='login'?'block':'none';document.getElementById('hs-signup-form').style.display=tab==='signup'?'block':'none';document.getElementById('hs-submit-btn').textContent=tab==='login'?'Sign In':'Create Account';document.getElementById('hs-error').style.display='none';}
+function doHorizenAuth(){if(horizenAuthTab==='login')doHorizenLogin();else doHorizenSignup();}
+async function doHorizenLogin(){
+  const id=document.getElementById('hs-login-id').value.trim(),pass=document.getElementById('hs-login-pass').value,errEl=document.getElementById('hs-error'),btn=document.getElementById('hs-submit-btn');
+  if(!id||!pass){errEl.textContent='Please fill in all fields';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Signing in...';
+  try{const hash=await sha256(pass);let query=sb.from('horizen_accounts').select('*').eq('password_hash',hash);query=id.includes('@')?query.eq('email',id):query.eq('username',id);const{data,error}=await query.maybeSingle();if(error||!data){errEl.textContent='Invalid username/email or password';errEl.style.display='block';btn.disabled=false;btn.textContent='Sign In';return;}horizenAccount=data;localStorage.setItem('hz_account',JSON.stringify(data));await sb.from('horizen_sessions').upsert({account_id:data.id,fingerprint:myAddress,last_active:new Date().toISOString()},{onConflict:'account_id,fingerprint'});closeHorizenSignIn();onHorizenAccountLoaded();showToast('Welcome back, '+data.display_name+'!','Horizon','✅');}catch(e){errEl.textContent='Login failed: '+e.message;errEl.style.display='block';}
+  btn.disabled=false;btn.textContent='Sign In';
+}
+async function doHorizenSignup(){
+  const username=document.getElementById('hs-signup-username').value.trim(),email=document.getElementById('hs-signup-email').value.trim(),pass=document.getElementById('hs-signup-pass').value,display=document.getElementById('hs-signup-display').value.trim()||username,errEl=document.getElementById('hs-error'),btn=document.getElementById('hs-submit-btn');
+  if(!username||!email||!pass){errEl.textContent='Please fill in all fields';errEl.style.display='block';return;}
+  if(pass.length<6){errEl.textContent='Password must be at least 6 characters';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Creating...';
+  try{const hash=await sha256(pass);const{data,error}=await sb.from('horizen_accounts').insert({username,email,password_hash:hash,display_name:display}).select().single();if(error){errEl.textContent=error.message.includes('duplicate')?'Username or email already taken':error.message;errEl.style.display='block';btn.disabled=false;btn.textContent='Create Account';return;}horizenAccount=data;localStorage.setItem('hz_account',JSON.stringify(data));await sb.from('horizen_sessions').insert({account_id:data.id,fingerprint:myAddress});closeHorizenSignIn();onHorizenAccountLoaded();showToast('Account created! Welcome, '+display+'!','Horizon','🎉');}catch(e){errEl.textContent='Signup failed: '+e.message;errEl.style.display='block';}
+  btn.disabled=false;btn.textContent='Create Account';
+}
+function doHorizenLogout(){stopLocationTracking();horizenAccount=null;localStorage.removeItem('hz_account');closeHorizenAccountPanel();document.getElementById('fp-horizen-tag').style.display='none';showToast('Signed out of Horizen account','Horizon','👋');}
+function onHorizenAccountLoaded(){
+  if(!horizenAccount)return;
+  document.getElementById('fp-horizen-tag').style.display='inline-flex';
+  if(horizenAccount.wallpaper_url&&!localStorage.getItem('horizon_bg')){setBG(horizenAccount.wallpaper_url);}
+  loadFamilyRestrictions();startScreenTimeTracking();
+}
+
+/* ================================================================
+   HORIZEN ACCOUNT PANEL
+   ================================================================ */
+function openHorizenAccountPanel(){
+  document.getElementById('fp-popup').classList.remove('open');
+  if(!horizenAccount)return;
+  document.getElementById('ha-avatar').textContent=(horizenAccount.display_name||horizenAccount.username||'?')[0].toUpperCase();
+  document.getElementById('ha-name').textContent=horizenAccount.display_name||horizenAccount.username;
+  document.getElementById('ha-email').textContent=horizenAccount.email;
+  document.getElementById('ha-screentime').textContent=todayScreenMinutes+' min';
+  document.getElementById('horizen-account-panel').classList.add('open');
+  document.getElementById('ha-overlay').classList.add('show');
+  loadAccountStats();
+}
+function closeHorizenAccountPanel(){document.getElementById('horizen-account-panel').classList.remove('open');document.getElementById('ha-overlay').classList.remove('show');}
+async function loadAccountStats(){
+  if(!horizenAccount)return;
+  try{
+    const today=new Date().toISOString().split('T')[0];
+    const{data:searches}=await sb.from('account_search_history').select('query').eq('account_id',horizenAccount.id).gte('searched_at',today+'T00:00:00').limit(5);
+    const{data:apps}=await sb.from('account_app_history').select('app_name').eq('account_id',horizenAccount.id).gte('opened_at',today+'T00:00:00');
+    document.getElementById('ha-searches').textContent=(searches||[]).length;
+    document.getElementById('ha-apps').textContent=(apps||[]).length;
+    const{data:member}=await sb.from('family_members').select('*,family:horizen_family(*)').eq('account_id',horizenAccount.id).maybeSingle();
+    if(member)document.getElementById('ha-family-info').innerHTML=`<div style="font-size:13px;color:var(--accent);font-weight:700">${escHtml(member.family?.family_name||'My Family')}</div><div style="font-size:12px;color:#888;margin-top:4px">Role: ${member.role}</div>`;
+  }catch(e){}
+}
+
+/* ================================================================
+   SIGNINS PANEL
+   ================================================================ */
+function openSignInsPanel(){
+  document.getElementById('fp-popup').classList.remove('open');
+  const body=document.getElementById('signins-body');body.innerHTML='';document.getElementById('signins-panel').classList.add('open');
+  const rows=[];
+  if(horizenAccount)rows.push(`<div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(0,235,132,0.06);border:1px solid rgba(0,235,132,0.2);border-radius:12px;margin-bottom:8px"><div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#00a86b);display:flex;align-items:center;justify-content:center;font-weight:800;color:#000;font-size:16px">${(horizenAccount.display_name||'?')[0].toUpperCase()}</div><div style="flex:1"><div style="font-size:14px;font-weight:700">${escHtml(horizenAccount.display_name||horizenAccount.username)}</div><div style="font-size:11px;color:#888">${escHtml(horizenAccount.email)} · Horizen Account</div></div><span style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(0,235,132,0.15);color:var(--accent);font-weight:800">ACTIVE</span></div>`);
+  if(currentAdmin)rows.push(`<div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(255,77,106,0.06);border:1px solid rgba(255,77,106,0.2);border-radius:12px;margin-bottom:8px"><div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#ff4d6a,#ff9500);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:16px">A</div><div style="flex:1"><div style="font-size:14px;font-weight:700">${escHtml(currentAdmin.username)}</div><div style="font-size:11px;color:#888">Admin · ${escHtml(currentAdmin.role)}</div></div><span style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(255,77,106,0.15);color:#ff4d6a;font-weight:800">ADMIN</span></div>`);
+  if(!rows.length)rows.push('<div style="padding:20px;text-align:center;color:#888;font-size:13px">No accounts signed in</div>');
+  body.innerHTML=rows.join('');
+}
+function closeSignInsPanel(){document.getElementById('signins-panel').classList.remove('open');}
+
+/* ================================================================
+   FAMILY / SCREEN TIME / LOCATION
+   ================================================================ */
+function startScreenTimeTracking(){if(screenTimeInterval)clearInterval(screenTimeInterval);screenTimeLimitMinutes=familyRestrictions?.screen_time_limit_minutes||0;loadTodayScreenTime();screenTimeInterval=setInterval(async()=>{todayScreenMinutes++;document.getElementById('ha-screentime').textContent=todayScreenMinutes+' min';if(todayScreenMinutes%5===0)saveScreenTime();if(screenTimeLimitMinutes>0){const remaining=screenTimeLimitMinutes-todayScreenMinutes;if(remaining===10||remaining===5)showScreenTimeWarning(`You have ${remaining} minutes of screen time remaining today.`);if(remaining<=0){showScreenTimeWarning('Screen time limit reached.');lockBrowser();}}},60000);}
+async function loadTodayScreenTime(){if(!horizenAccount)return;try{const today=new Date().toISOString().split('T')[0];const{data}=await sb.from('screen_time_logs').select('minutes_used').eq('account_id',horizenAccount.id).eq('date',today).maybeSingle();todayScreenMinutes=data?.minutes_used||0;document.getElementById('ha-screentime').textContent=todayScreenMinutes+' min';}catch(e){}}
+async function saveScreenTime(){if(!horizenAccount)return;try{const today=new Date().toISOString().split('T')[0];await sb.from('screen_time_logs').upsert({account_id:horizenAccount.id,date:today,minutes_used:todayScreenMinutes},{onConflict:'account_id,date'});}catch(e){}}
+function showScreenTimeWarning(msg){const el=document.getElementById('screen-time-warning');document.getElementById('stw-msg').textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),8000);}
+async function loadFamilyRestrictions(){
+  if(!horizenAccount)return;
+  try{
+    const{data:member}=await sb.from('family_members').select('family_id,role').eq('account_id',horizenAccount.id).maybeSingle();
+    if(!member||member.role!=='child')return;
+    const{data:restrictions}=await sb.from('family_restrictions').select('*').eq('child_account_id',horizenAccount.id).maybeSingle();
+    familyRestrictions=restrictions;
+    if(restrictions){if(restrictions.locked)lockBrowser();screenTimeLimitMinutes=restrictions.screen_time_limit_minutes||0;if(restrictions.location_tracking)startLocationTracking();}
+    sb.channel(`restrictions:${horizenAccount.id}`).on('postgres_changes',{event:'UPDATE',schema:'public',table:'family_restrictions',filter:'child_account_id=eq.'+horizenAccount.id},p=>{familyRestrictions=p.new;if(p.new.locked)lockBrowser();else unlockBrowserSilent();screenTimeLimitMinutes=p.new.screen_time_limit_minutes||0;if(p.new.location_tracking&&!locationTrackingEnabled)startLocationTracking();else if(!p.new.location_tracking&&locationTrackingEnabled)stopLocationTracking();showToast('Parental controls updated','HorizenFamily','👨‍👧');}).subscribe();
+  }catch(e){}
+}
+function lockBrowser(){familyLocked=true;document.getElementById('family-lock-overlay').classList.add('show');}
+function unlockBrowserSilent(){familyLocked=false;document.getElementById('family-lock-overlay').classList.remove('show');}
+async function tryUnlockBrowser(){const code=document.getElementById('lock-code-input').value.trim();if(!code)return showToast('Enter unlock code','Lock','⚠️');try{const{data}=await sb.from('family_restrictions').select('unlock_code').eq('child_account_id',horizenAccount?.id).maybeSingle();if(data?.unlock_code&&data.unlock_code===code){unlockBrowserSilent();showToast('Browser unlocked','Lock','🔓');}else showToast('Incorrect code','Lock','❌');}catch(e){}}
+function openHorizenFamily(){if(!horizenAccount){showToast('Sign in to your Horizen account first','HorizenFamily','⚠️');openHorizenSignIn();return;}openUrl('https://family.horizensearch.com','HorizenFamily');}
+
+/* ===== LOCATION TRACKING ===== */
+function startLocationTracking(){if(locationTrackingEnabled||!navigator.geolocation)return;locationTrackingEnabled=true;updateLocationIndicator();sendLocationUpdate();if(locationTrackingInterval)clearInterval(locationTrackingInterval);locationTrackingInterval=setInterval(sendLocationUpdate,5*60*1000);}
+function stopLocationTracking(){locationTrackingEnabled=false;if(locationTrackingInterval){clearInterval(locationTrackingInterval);locationTrackingInterval=null;}updateLocationIndicator();}
+async function sendLocationUpdate(){if(!locationTrackingEnabled||!horizenAccount||!navigator.geolocation)return;return new Promise(resolve=>{navigator.geolocation.getCurrentPosition(async pos=>{const{latitude,longitude,accuracy}=pos.coords;lastLocationSent={lat:latitude,lng:longitude};try{await sb.from('child_locations').insert({account_id:horizenAccount.id,latitude,longitude,accuracy});}catch(e){}resolve();},()=>resolve(),{enableHighAccuracy:true,timeout:15000,maximumAge:300000});});}
+function updateLocationIndicator(){const indicator=document.getElementById('loc-indicator'),text=document.getElementById('loc-indicator-text');if(locationTrackingEnabled&&horizenAccount){indicator.classList.add('tracking');text.textContent='Loc';}else{indicator.classList.remove('tracking');text.textContent='Loc';}}
+
+/* ===== HISTORY ===== */
+function addToHistory(name,url){const e={name:name||url,url:url||'',time:Date.now()};browsingHistory=[e,...browsingHistory.filter(h=>h.url!==url)].slice(0,100);localStorage.setItem('hz_history',JSON.stringify(browsingHistory));}
+function clearHistory(){browsingHistory=[];localStorage.removeItem('hz_history');renderHistory();showToast('History cleared','System','🗑️');}
+function renderHistory(){const list=document.getElementById('history-list');if(!browsingHistory.length){list.innerHTML='<div style="padding:18px;color:#555;text-align:center;font-size:13px"><i class="fas fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;"></i>No browsing history</div>';return;}list.innerHTML=browsingHistory.map(h=>{const ago=timeAgo(h.time);const isUrl=h.url&&(h.url.startsWith('http')||h.url.includes('.'));const sn=(h.name||'').replace(/'/g,"\\'");const su=(h.url||'').replace(/'/g,"\\'");const onclick=isUrl?`openUrl('${su}','${sn}')`:`performSearch('${sn}')`;return`<div class="history-item" onclick="${onclick}"><div class="hi-icon"><i class="fas ${isUrl?'fa-globe':'fa-magnifying-glass'}"></i></div><div class="hi-info"><div class="hi-name">${escHtml(h.name)}</div><div class="hi-url">${escHtml(h.url||'Search query')}</div></div><div class="hi-time">${ago}</div></div>`;}).join('');}
+function toggleHistory(){const p=document.getElementById('history-panel'),o=document.getElementById('history-overlay');const isOpen=p.classList.contains('open');p.classList.toggle('open');o.classList.toggle('show');if(!isOpen)renderHistory();}
+
+/* ===== TABS & WINDOWS ===== */
+function saveTabs(){const tabs=openTabs.map(id=>({id,name:document.querySelector('#tab-'+id+' .tab-label')?.textContent?.trim()||'',src:document.querySelector('#view-'+id+' iframe')?.src||''}));localStorage.setItem('hz_open_tabs',JSON.stringify(tabs));}
+function restoreTabs(){try{JSON.parse(localStorage.getItem('hz_open_tabs')||'[]').forEach(t=>{if(t.id&&t.name&&!['home','results','store'].includes(t.id)&&t.src)createNewTab(t.name,null,t.src,null,false);});}catch(e){}}
+function switchTab(id){document.querySelectorAll('.view-pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));const vp=document.getElementById('view-'+id),tb=document.getElementById('tab-'+id);if(vp)vp.classList.add('active');if(tb){tb.classList.add('active');tb.style.display='flex';}if(id==='store')loadAppStore();}
+function enableDrag(tab){tab.addEventListener('dragstart',()=>tab.classList.add('dragging'));tab.addEventListener('dragend',()=>{tab.classList.remove('dragging');saveTabs();});tab.addEventListener('dragover',e=>{e.preventDefault();const d=document.querySelector('.tab.dragging');if(!d||d===tab)return;const r=tab.getBoundingClientRect();tab.parentNode.insertBefore(d,(e.clientX-r.left)<r.width/2?tab:tab.nextSibling);});}
+const quickMap={'docs.google.com':'Google Docs','drive.google.com':'Google Drive','mail.google.com':'Gmail','youtube.com':'YouTube','twitter.com':'X','x.com':'X','facebook.com':'Facebook','instagram.com':'Instagram','reddit.com':'Reddit','github.com':'GitHub','wikipedia.org':'Wikipedia','amazon.com':'Amazon','netflix.com':'Netflix','spotify.com':'Spotify','discord.com':'Discord','twitch.tv':'Twitch','linkedin.com':'LinkedIn','tiktok.com':'TikTok','horizensearch.com':'Horizon Search','ai.horizensearch.com':'Horizen AI','gd.horizensearch.com':'Geometry Dash','video.horizensearch.com':'Horienvideo','family.horizensearch.com':'HorizenFamily'};
+function quickShorten(url){try{const u=new URL(url),h=u.hostname.replace(/^www\./,'');if(quickMap[h])return quickMap[h];for(const[d,l]of Object.entries(quickMap)){if(h.endsWith('.'+d))return l;}return null;}catch(e){return null;}}
+async function createNewTab(name,html,url,srcdoc,doSwitch=true){
+  if(familyLocked){showToast('Browser is locked by your parent','HorizenFamily','🔒');return;}
+  if(url&&familyRestrictions?.blocked_urls?.length){if(familyRestrictions.blocked_urls.some(b=>url.includes(b))){showToast('This site is blocked by your parent','HorizenFamily','🚫');return;}}
+  const safeId='t_'+Math.random().toString(36).slice(2,10);
+  let displayName=name||quickShorten(url)||'Loading...';
+  const tab=document.createElement('div');tab.className='tab';tab.id='tab-'+safeId;tab.setAttribute('draggable','true');
+  tab.innerHTML=`<span class="tab-label">${escHtml(displayName)}</span><span class="close-tab" onclick="closeTab(event,'${safeId}')">&times;</span>`;
+  tab.onclick=()=>switchTab(safeId);enableDrag(tab);
+  document.getElementById('tab-bar').insertBefore(tab,document.getElementById('add-win-btn'));
+  const pane=document.createElement('div');pane.className='view-pane';pane.id='view-'+safeId;
+  const ifr=document.createElement('iframe');
+  if(srcdoc!=null&&srcdoc!=='')ifr.srcdoc=srcdoc;else if(url)ifr.src=url;
+  pane.appendChild(ifr);document.getElementById('viewport').appendChild(pane);
+  openTabs.push(safeId);if(doSwitch)switchTab(safeId);
+  saveTabs();addToHistory(displayName,url||'');
+  if(horizenAccount&&url){sb.from('account_app_history').insert({account_id:horizenAccount.id,app_name:displayName,app_url:url}).catch(()=>{});}
+  ifr.addEventListener('load',()=>{try{const title=ifr.contentDocument?.title;if(title&&title.trim()){const lbl=document.querySelector('#tab-'+safeId+' .tab-label');if(lbl)lbl.textContent=title.trim().substring(0,30);}}catch(e){}});
+  return safeId;
+}
+function closeTab(e,id){e.stopPropagation();document.getElementById('tab-'+id)?.remove();document.getElementById('view-'+id)?.remove();openTabs=openTabs.filter(t=>t!==id);switchTab('home');saveTabs();}
+function openUrl(url,name){createNewTab(name,null,url,null,true);}
+function openNewWinModal(){document.getElementById('new-win-name-input').value='';document.getElementById('new-win-modal').classList.add('open');setTimeout(()=>document.getElementById('new-win-name-input').focus(),100);}
+function closeNewWinModal(){document.getElementById('new-win-modal').classList.remove('open');}
+function confirmNewWindow(){let name=document.getElementById('new-win-name-input').value.trim();if(!name)name='New Window';closeNewWinModal();createNewTab(name,null,'','<html><body style="margin:0;background:#0a0a0a;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;"><h2>Empty Window</h2></body></html>',true);showToast('Window "'+name+'" created','Windows','🪟');}
+async function handleTopBar(){const val=document.getElementById('addr-bar').value.trim();if(!val)return;document.getElementById('addr-bar').value='';document.getElementById('search-suggestions-dropdown').style.display='none';if(val.startsWith('http://')||val.startsWith('https://')||val.includes('.'))openUrl(val.includes('://')?val:'https://'+val);else performSearch(val);}
+function switchFilter(fId,btn){document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.content-section').forEach(s=>s.classList.remove('active'));btn.classList.add('active');document.getElementById('content-'+fId).classList.add('active');}
+
+/* ================================================================
+   SEARCH (Horizen AI + Pexels + YouTube/Horienvideo)
+   ================================================================ */
+
+/* --- AI Websites: parse JSON array out of AI reply --- */
+function parseWebsitesJSON(text){
+  try{
+    const m=String(text).match(/\[[\s\S]*\]/);
+    if(!m)return null;
+    const arr=JSON.parse(m[0]);
+    if(!Array.isArray(arr))return null;
+    return arr.filter(s=>s&&s.url).map(s=>({title:s.title||'Website',url:String(s.url),desc:s.desc||s.description||''}));
+  }catch(e){return null;}
+}
+
+/* --- Render website cards (favicon + title + domain + desc) --- */
+function renderWebsites(sites,targetId,limit){
+  const el=document.getElementById(targetId);
+  if(!sites||!sites.length){if(targetId==='websites-grid')el.innerHTML='<div style="color:#666;font-size:13px;">No websites found.</div>';else el.innerHTML='';return;}
+  el.innerHTML=sites.slice(0,limit||sites.length).map(s=>{
+    let safeUrl=s.url.startsWith('http')?s.url:'https://'+s.url;
+    let domain='';try{domain=new URL(safeUrl).hostname;}catch(e){domain=safeUrl;}
+    const u=safeUrl.replace(/'/g,"%27");
+    const n=String(s.title||domain||'Website').replace(/'/g,"\\'");
+    return `<div class="website-card" onclick="openUrl('${u}','${n}')">
+      <div class="wc-icon"><img src="https://icons.duckduckgo.com/ip3/${domain}.ico" alt="" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=${domain}&sz=64'"></div>
+      <div class="wc-body">
+        <div class="wc-title">${escHtml(s.title||'Website')}</div>
+        <div class="wc-url">${escHtml(domain)}</div>
+        <div class="wc-desc">${escHtml(s.desc||'')}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* --- Videos (YouTube Data API, same key as Horienvideo) --- */
+async function fetchVideos(q){
+  try{
+    const r=await fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q='+encodeURIComponent(q)+'&key='+YOUTUBE_API_KEY);
+    const d=await r.json();
+    if(d.error)return[];
+    return (d.items||[]).filter(v=>v.id&&v.id.videoId);
+  }catch(e){return[];}
+}
+function renderVideos(videos,targetId,limit){
+  const el=document.getElementById(targetId);
+  if(!videos||!videos.length){if(targetId==='videos-grid')el.innerHTML='<div style="color:#666;font-size:13px;">No videos found. <span style="color:var(--accent);cursor:pointer;" onclick="openUrl(\'https://video.horizensearch.com\',\'Horienvideo\')">Try Horienvideo ↗</span></div>';else el.innerHTML='';return;}
+  el.innerHTML=videos.slice(0,limit||videos.length).map(v=>{
+    const id=v.id.videoId,t=v.snippet.title,c=v.snippet.channelTitle;
+    const thumb=(v.snippet.thumbnails?.medium||v.snippet.thumbnails?.default||{}).url||'';
+    return `<div class="video-card" onclick="playVideoResult('${id}')">
+      <img src="${thumb}" loading="lazy" alt="">
+      <div class="vc-info">
+        <div class="vc-title">${escHtml(t)}</div>
+        <div class="vc-channel">${escHtml(c)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function playVideoResult(videoId){
+  switchTab('results');
+  switchFilter('videos',document.getElementById('filter-videos'));
+  document.getElementById('video-player').src='https://www.youtube.com/embed/'+videoId+'?autoplay=1';
+  document.getElementById('video-player-box').style.display='block';
+  document.getElementById('video-player-box').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* --- Main search --- */
+async function performSearch(customQuery){
+  const q=(customQuery||document.getElementById('search-input').value||'').trim();if(!q)return;
+  document.getElementById('search-input').value='';document.getElementById('home-suggestions').style.display='none';
+  addToHistory(q,'');saveSuggestion(q);
+  if(horizenAccount)sb.from('account_search_history').insert({account_id:horizenAccount.id,query:q}).catch(()=>{});
+  document.getElementById('search-title').innerText='Results for: '+q;
+  document.getElementById('tab-results').style.display='flex';switchTab('results');
+  ['all-websites-preview','websites-grid','all-images-preview','full-images-grid','all-videos-preview','videos-grid'].forEach(id=>document.getElementById(id).innerHTML='');
+  document.getElementById('video-player-box').style.display='none';document.getElementById('video-player').src='';
+  switchFilter('all',document.querySelector('.filter-btn'));
+  const cacheKey=q.toLowerCase();
+
+  /* AI Overview (Horizen API) */
+  const overviewEl=document.getElementById('inline-ai-box');
+  const cachedOverview=getSearchCache(cacheKey,'overview');
+  if(cachedOverview){overviewEl.innerText=cachedOverview;}
+  else{
+    overviewEl.innerText='Generating AI answer...';
+    getHorizenChat('Give a fact overview for: '+q,'Give a short, useful answer in 3-5 sentences.').then(t=>{
+      if(!t)t='AI is unavailable right now.';
+      overviewEl.innerText=t;setSearchCache(cacheKey,'overview',t);
+    });
+  }
+
+  /* Facts (Horizen API) */
+  const factsEl=document.getElementById('facts-content');
+  const cachedFacts=getSearchCache(cacheKey,'facts');
+  if(cachedFacts){factsEl.innerText=cachedFacts;}
+  else{
+    factsEl.innerText='Generating facts...';
+    getHorizenChat('Give me interesting facts about: '+q,'You are a facts assistant. Return 4-6 short, interesting, accurate facts. Put each fact on its own line, starting with "• ".').then(t=>{
+      if(!t)t='Could not generate facts right now.';
+      factsEl.innerText=t;setSearchCache(cacheKey,'facts',t);
+    });
+  }
+
+  /* Websites (Horizen AI curated) */
+  const cachedSites=getSearchCache(cacheKey,'websites');
+  if(cachedSites&&cachedSites.length){renderWebsites(cachedSites,'websites-grid');renderWebsites(cachedSites,'all-websites-preview',4);}
+  else{
+    document.getElementById('websites-grid').innerHTML='<div style="color:#666;font-size:13px;"><span class="spinner"></span> Curating websites with Horizen AI...</div>';
+    getHorizenChat(
+      'List the 6 best real websites for the query: "'+q+'". Respond ONLY with a valid JSON array in this exact format, with no other text: [{"title":"Website Name","url":"https://example.com","desc":"Short one-line description"}]',
+      'You are a search engine assistant. You output only valid JSON arrays of real, well-known websites. No markdown, no code fences, no explanation.'
+    ).then(t=>{
+      const sites=parseWebsitesJSON(t);
+      if(sites&&sites.length){setSearchCache(cacheKey,'websites',sites);renderWebsites(sites,'websites-grid');renderWebsites(sites,'all-websites-preview',4);}
+      else{document.getElementById('websites-grid').innerHTML='<div style="color:#666;font-size:13px;">No websites found.</div>';}
+    });
+  }
+
+  /* Images (Pexels) */
+  fetch('https://api.pexels.com/v1/search?query='+encodeURIComponent(q)+'&per_page=12',{headers:{Authorization:PEXELS_KEY}}).then(r=>r.json()).then(d=>{const imgs=(d.photos||[]).map(p=>`<img src="${p.src.medium}" onclick="setBG('${p.src.large2x}')" loading="lazy">`).join('');document.getElementById('all-images-preview').innerHTML=imgs;document.getElementById('full-images-grid').innerHTML=imgs;}).catch(()=>{});
+
+  /* Videos (YouTube / Horienvideo) */
+  fetchVideos(q).then(vids=>{
+    if(vids.length){renderVideos(vids,'videos-grid');renderVideos(vids,'all-videos-preview',4);}
+    else{renderVideos(null,'videos-grid');renderVideos(null,'all-videos-preview');}
+  });
+}
+
+/* ===== APP STORE ===== */
+async function loadAppStore(){
+  const q=document.getElementById('app-store-search').value.trim().toLowerCase();
+  document.getElementById('app-store-grid').innerHTML='<div style="text-align:center;padding:40px;color:#888;"><span class="spinner"></span></div>';
+  const{data,error}=await sb.from('apps').select('id,name,description,category,icon_url,html,created_at').order('created_at',{ascending:false});
+  if(error){document.getElementById('app-store-grid').innerHTML='<div style="color:#888;padding:20px;">App store unavailable</div>';return;}
+  appCache=(data||[]).filter(app=>{const h=(app.name||'')+' '+(app.description||'')+' '+(app.category||'');return!q||h.toLowerCase().includes(q);});
+  document.getElementById('app-store-grid').innerHTML=appCache.length?appCache.map(app=>`<div class="store-card" onclick="openApp('${app.id}')"><img src="${escHtml(app.icon_url||'')}" alt="" onerror="this.style.display='none'"><h3>${escHtml(app.name||'Untitled')}</h3><p>${escHtml(app.description||'')}</p><div class="meta-line">${escHtml(app.category||'General')}</div></div>`).join(''):'<div style="color:#888;padding:20px;">No apps found.</div>';
+}
+function openApp(id){const app=appCache.find(a=>String(a.id)===String(id));if(!app)return;createNewTab(app.name||'App',null,null,app.html||'<h1 style="color:#fff;padding:20px;">Empty App</h1>',true);if(horizenAccount)sb.from('account_app_history').insert({account_id:horizenAccount.id,app_name:app.name||'App'}).catch(()=>{});}
+
+/* ===== CONTEXT MENU ===== */
+function handleGlobalContextMenu(e){e.preventDefault();const m=document.getElementById('context-menu');m.style.display='block';m.style.left=Math.min(e.pageX,window.innerWidth-220)+'px';m.style.top=Math.min(e.pageY,window.innerHeight-200)+'px';}
+window.addEventListener('click',()=>document.getElementById('context-menu').style.display='none');
+
+/* ===== WALLPAPER ===== */
+function toggleWPPicker(){const p=document.getElementById('wp-picker'),o=document.getElementById('wp-overlay');const isOpen=p.style.display==='flex';p.style.display=isOpen?'none':'flex';o.classList.toggle('show',!isOpen);}
+function setBG(url){document.body.style.backgroundImage="url('"+url+"')";localStorage.setItem('horizon_bg',url);if(horizenAccount){sb.from('horizen_accounts').update({wallpaper_url:url}).eq('id',horizenAccount.id).catch(()=>{});horizenAccount.wallpaper_url=url;localStorage.setItem('hz_account',JSON.stringify(horizenAccount));}showToast('Wallpaper applied','Wallpaper','🖼️');}
+function resetBG(){document.body.style.backgroundImage='none';localStorage.removeItem('horizon_bg');showToast('Wallpaper reset','Wallpaper','🖼️');}
+document.getElementById('wp-search').addEventListener('keypress',e=>{if(e.key==='Enter'){const q=e.target.value.trim();if(!q)return;document.getElementById('wp-grid').innerHTML='<div style="text-align:center;padding:30px;"><span class="spinner"></span></div>';fetch('https://api.pexels.com/v1/search?query='+encodeURIComponent(q)+'&per_page=20',{headers:{Authorization:PEXELS_KEY}}).then(r=>r.json()).then(d=>{document.getElementById('wp-grid').innerHTML=(d.photos||[]).map(p=>`<img src="${p.src.medium}" class="wp-item" onclick="setBG('${p.src.large2x}')">`).join('')||'<div style="text-align:center;padding:30px;color:#888;">No results</div>';}).catch(()=>{});}});
+
+/* ===== WEATHER ===== */
+const wCodes={0:{i:'☀️',d:'Clear sky'},1:{i:'🌤️',d:'Mainly clear'},2:{i:'⛅',d:'Partly cloudy'},3:{i:'☁️',d:'Overcast'},45:{i:'🌫️',d:'Foggy'},51:{i:'🌦️',d:'Light drizzle'},61:{i:'🌧️',d:'Slight rain'},63:{i:'🌧️',d:'Moderate rain'},65:{i:'🌧️',d:'Heavy rain'},80:{i:'🌦️',d:'Rain showers'},95:{i:'⛈️',d:'Thunderstorm'}};
+function toggleWeather(){const d=document.getElementById('weather-dropdown');d.style.display=d.style.display==='block'?'none':'block';if(d.style.display==='block')fetchWeather();}
+async function fetchWeather(){try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.3382&longitude=-121.8863&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,pressure_msl&daily=temperature_2m_max,temperature_2m_min&timezone=auto');const j=await r.json();const c=j.current||{},d=j.daily||{};const wi=wCodes[c.weather_code]||{i:'🌡️',d:'Unknown'};const temp=Math.round(c.temperature_2m||0);document.getElementById('weather-icon').className='fas '+(c.weather_code===0?(c.is_day?'fa-sun':'fa-moon'):'fa-cloud');document.getElementById('weather-temp').textContent=temp+'°';document.getElementById('weather-dropdown').innerHTML=`<div class="weather-hero"><div style="font-size:48px">${wi.i}</div><div><div class="weather-hero-temp">${temp}°C</div><div class="weather-hero-desc">${wi.d}</div><div style="font-size:12px;color:#666;margin-top:4px"><i class="fas fa-location-dot"></i> San Jose, CA</div></div></div><div class="weather-grid"><div class="weather-card"><div class="v">${c.apparent_temperature??'--'}°</div><div class="k">Feels Like</div></div><div class="weather-card"><div class="v">${c.relative_humidity_2m??'--'}%</div><div class="k">Humidity</div></div><div class="weather-card"><div class="v">${c.wind_speed_10m??'--'} km/h</div><div class="k">Wind</div></div><div class="weather-card"><div class="v">${c.pressure_msl??'--'} hPa</div><div class="k">Pressure</div></div><div class="weather-card"><div class="v">${d.temperature_2m_max?.[0]??'--'}°</div><div class="k">High</div></div><div class="weather-card"><div class="v">${d.temperature_2m_min?.[0]??'--'}°</div><div class="k">Low</div></div></div>`;}catch(e){document.getElementById('weather-dropdown').innerHTML='<div style="padding:30px;text-align:center;color:#888;">Weather unavailable</div>';}}
+
+/* ===== WIFI ===== */
+function toggleWifi(){const p=document.getElementById('wifi-panel');p.classList.toggle('open');if(p.classList.contains('open'))renderWifiContent();}
+function switchWifiTab(tab,btn){wifiTabState=tab;document.querySelectorAll('.wifi-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderWifiContent();}
+async function renderWifiContent(){
+  const body=document.getElementById('wifi-body');
+  if(wifiTabState==='networks'){
+    const conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;let info='';
+    if(conn){const type=conn.effectiveType||'unknown';const down=conn.downlink?conn.downlink+' Mbps':'--';const rtt=conn.rtt?conn.rtt+' ms':'--';info=`<div class="wifi-network connected"><div style="font-size:18px;width:24px;text-align:center;color:var(--accent)"><i class="fas fa-wifi"></i></div><div><div class="wn-name">Connected Network</div><div class="wn-detail">Type: ${type.toUpperCase()} · Downlink: ${down}</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><div class="speed-card"><div class="sv">${down}</div><div class="sk">Downlink</div></div><div class="speed-card"><div class="sv">${rtt}</div><div class="sk">Latency</div></div></div>`;}
+    else{const online=navigator.onLine;info=`<div class="wifi-network ${online?'connected':''}"><div style="font-size:18px;width:24px;text-align:center;color:${online?'var(--accent)':'#ff4d6a'}"><i class="fas fa-wifi"></i></div><div><div class="wn-name">${online?'Connected':'Disconnected'}</div><div class="wn-detail">Network Info API not available</div></div></div>`;}
+    body.innerHTML=info;
+  }else{
+    body.innerHTML=`<div class="speed-test-box"><div class="speed-label">Download Speed</div><div class="speed-big" id="speed-value">--</div><div class="speed-label">Mbps</div><div class="speed-details"><div class="speed-card"><div class="sv" id="speed-upload">--</div><div class="sk">Upload Mbps</div></div><div class="speed-card"><div class="sv" id="speed-ping">--</div><div class="sk">Ping ms</div></div></div><button class="speed-btn" id="speed-test-btn" onclick="runSpeedTest()">Start Test</button></div>`;
+  }
+}
+async function runSpeedTest(){
+  if(speedTestRunning)return;speedTestRunning=true;
+  const btn=document.getElementById('speed-test-btn'),valEl=document.getElementById('speed-value'),upEl=document.getElementById('speed-upload'),pingEl=document.getElementById('speed-ping');
+  btn.disabled=true;btn.textContent='Testing...';valEl.textContent='0';
+  const pingStart=Date.now();try{await fetch('https://www.google.com/favicon.ico?_='+Date.now(),{mode:'no-cors',cache:'no-store'});}catch(e){}
+  pingEl.textContent=Date.now()-pingStart;
+  const conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  if(conn&&conn.downlink){const dl=conn.downlink;for(let i=0;i<=dl*10;i+=Math.floor(Math.random()*5)+2){valEl.textContent=(i/10).toFixed(1);await new Promise(r=>setTimeout(r,60));}valEl.textContent=dl.toFixed(1);upEl.textContent=(dl*0.4).toFixed(1);}
+  else{const start=Date.now();try{await fetch('https://speed.cloudflare.com/__down?bytes=500000',{cache:'no-store'});}catch(e){}const speed=((500000*8)/((Date.now()-start)/1000)/1000000).toFixed(1);valEl.textContent=speed;upEl.textContent=(parseFloat(speed)*0.4).toFixed(1);}
+  btn.disabled=false;btn.textContent='Test Again';speedTestRunning=false;
+}
+function updateWifiIcon(){document.getElementById('wifi-icon').style.color=navigator.onLine?'var(--accent)':'#ff4d6a';}
+window.addEventListener('online',()=>{updateWifiIcon();showToast('Connected','Network','📶');});
+window.addEventListener('offline',()=>{updateWifiIcon();showToast('Disconnected','Network','⚠️');});
+
+/* ===== BOT (Horizen AI) ===== */
+function toggleBot(){document.getElementById('bot-panel').classList.toggle('open');}
+function addBotMsg(text,isUser){const box=document.getElementById('bot-messages');const div=document.createElement('div');div.className='bot-msg '+(isUser?'user':'bot');div.textContent=text;box.appendChild(div);box.scrollTop=box.scrollHeight;}
+function addBotTyping(){const box=document.getElementById('bot-messages');const div=document.createElement('div');div.className='bot-msg bot';div.id='bot-typing';div.innerHTML='<div class="typing-dots"><span></span><span></span><span></span></div>';box.appendChild(div);box.scrollTop=box.scrollHeight;}
+function removeBotTyping(){document.getElementById('bot-typing')?.remove();}
+async function sendBot(){
+  const input=document.getElementById('bot-input');const msg=input.value.trim();input.value='';if(!msg)return;
+  addBotMsg(msg,true);addBotTyping();const lower=msg.toLowerCase();
+  if(lower.startsWith('open ')){removeBotTyping();const q=msg.substring(5).trim();if(q.includes('.')||q.startsWith('http')){openUrl(q.includes('://')?q:'https://'+q);addBotMsg('Opened '+q,false);return;}performSearch(q);addBotMsg('Searched for "'+q+'".',false);return;}
+  if(lower.startsWith('search ')){removeBotTyping();performSearch(msg.substring(7).trim());addBotMsg('Searched!',false);return;}
+  if(lower.startsWith('videos ')){removeBotTyping();performSearch(msg.substring(7).trim());setTimeout(()=>playVideoTab(),600);addBotMsg('Searching videos!',false);return;}
+  if(lower.startsWith('change wallpaper to ')){const query=msg.replace(/^change wallpaper to /i,'').trim();removeBotTyping();addBotMsg('Searching "'+query+'"...',false);try{const r=await fetch('https://api.pexels.com/v1/search?query='+encodeURIComponent(query)+'&per_page=6',{headers:{Authorization:PEXELS_KEY}});const d=await r.json();if(d.photos?.length){setBG(d.photos[0].src.large2x);addBotMsg('Wallpaper changed!',false);}else addBotMsg('No wallpapers found.',false);}catch(e){addBotMsg('Failed.',false);}return;}
+  if(lower==='clear history'){removeBotTyping();clearHistory();addBotMsg('History cleared!',false);return;}
+  const response=await getHorizenChat(msg,'You are the Horizon OS Assistant. Keep answers short.');removeBotTyping();addBotMsg(response||'Sorry, I could not respond right now.',false);
+}
+function playVideoTab(){const vp=document.getElementById('view-results');if(!vp.classList.contains('active'))return;switchFilter('videos',document.getElementById('filter-videos'));}
+
+/* ===== VOICE ===== */
+function startVoiceSearch(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){showToast('Voice not supported','Voice','🎤');return;}const rec=new SR();rec.lang='en-US';rec.interimResults=false;rec.onresult=e=>{const t=e.results[0][0].transcript;document.getElementById('search-input').value=t;performSearch(t);};rec.onerror=()=>showToast('Voice failed','Voice','🎤');rec.start();showToast('Listening...','Voice','🎤');}
+
+/* ===== FINGERPRINT ===== */
+async function generateFingerprint(){let raw='';try{const c=document.createElement('canvas');const ctx=c.getContext('2d');ctx.textBaseline='top';ctx.font='14px Arial';ctx.fillText('HorizonFP',2,2);raw+=c.toDataURL();}catch(e){}try{const c=document.createElement('canvas');const gl=c.getContext('webgl');if(gl){const di=gl.getExtension('WEBGL_debug_renderer_info');if(di){raw+=gl.getParameter(di.UNMASKED_VENDOR_WEBGL);raw+=gl.getParameter(di.UNMASKED_RENDERER_WEBGL);}}}catch(e){}raw+=navigator.hardwareConcurrency||'na';raw+=screen.width+'x'+screen.height+screen.colorDepth;raw+=(navigator.platform||'na');raw+=new Date().getTimezoneOffset();raw+=navigator.language;let h1=0x811c9dc5;for(let i=0;i<raw.length;i++){h1^=raw.charCodeAt(i);h1=Math.imul(h1,0x01000193);}let h2=0x811c9dc5;const rev=raw.split('').reverse().join('');for(let i=0;i<rev.length;i++){h2^=rev.charCodeAt(i);h2=Math.imul(h2,0x01000193);}return'hz-pc-'+((h1>>>0).toString(16)+(h2>>>0).toString(16)).toUpperCase().substring(0,16);}
+async function checkIfBlocked(id){try{const{data}=await sb.from('users').select('is_blocked').eq('computer_id',id).maybeSingle();if(data?.is_blocked)location.href='https://blocked.horizensearch.com';return data?.is_blocked;}catch(e){}return false;}
+async function initHorizenBlocker(){
+  let id=localStorage.getItem('horizen_computer_id');if(!id){id=await generateFingerprint();localStorage.setItem('horizen_computer_id',id);}
+  myAddress=id;document.getElementById('hz-addr-text').innerText=id;
+  await sb.from('users').upsert({computer_id:id},{onConflict:'computer_id'}).catch(()=>{});
+  if(await checkIfBlocked(id))return false;
+  try{sb.channel('user-block-watch').on('postgres_changes',{event:'UPDATE',schema:'public',table:'users',filter:'computer_id=eq.'+id},p=>{if(p.new?.is_blocked)location.href='https://blocked.horizensearch.com';}).subscribe();}catch(e){}
+  blockPollInterval=setInterval(()=>checkIfBlocked(id),2000);return true;
+}
+
+/* ===== FP POPUP ===== */
+function toggleFPPopup(){document.getElementById('fp-popup').classList.toggle('open');}
+function copyAddress(){document.getElementById('fp-popup').classList.remove('open');navigator.clipboard.writeText(myAddress).then(()=>{const el=document.getElementById('hz-addr-text');el.innerText='Copied!';setTimeout(()=>el.innerText=myAddress,1500);});}
+
+/* ===== ADMIN ===== */
+async function openAdminLogin(){document.getElementById('fp-popup').classList.remove('open');if(currentAdmin){doAdminLogout();return;}document.getElementById('admin-user').value='';document.getElementById('admin-pass').value='';document.getElementById('login-error').style.display='none';document.getElementById('admin-login-modal').classList.add('open');setTimeout(()=>document.getElementById('admin-user').focus(),100);}
+function closeAdminLogin(){document.getElementById('admin-login-modal').classList.remove('open');}
+async function doAdminLogin(){
+  const username=document.getElementById('admin-user').value.trim(),password=document.getElementById('admin-pass').value,errEl=document.getElementById('login-error'),btn=document.getElementById('login-submit-btn');
+  if(!username||!password){errEl.textContent='Please enter both fields';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Signing in...';errEl.style.display='none';
+  try{const hash=await sha256(password);const{data,error}=await sb.from('admin_accounts').select('*').eq('username',username).eq('password_hash',hash).eq('is_active',true).maybeSingle();if(error||!data){errEl.textContent='Invalid username or password';errEl.style.display='block';btn.disabled=false;btn.textContent='Sign In';return;}currentAdmin={username:data.username,role:data.role};closeAdminLogin();document.getElementById('fp-admin-tag').style.display='inline-flex';document.getElementById('role-mode-btn').style.display='flex';document.getElementById('role-mode-label').textContent=data.role.toUpperCase()+' Mode';showToast('Signed in as '+data.username+' ('+data.role+')','Admin','🛡️');}catch(e){errEl.textContent='Login failed: '+e.message;errEl.style.display='block';}
+  btn.disabled=false;btn.textContent='Sign In';
+}
+function doAdminLogout(){currentAdmin=null;document.getElementById('fp-admin-tag').style.display='none';document.getElementById('role-mode-btn').style.display='none';showToast('Signed out of admin account','Admin','🛡️');}
+function getRoleBadgeClass(role){return{'mod':'role-mod','dev':'role-dev','co-owner':'role-co-owner','owner':'role-owner'}[role]||'role-mod';}
+async function openCodesModal(){if(!currentAdmin){showToast('Sign in to an admin account first','Admin','⚠️');return;}document.getElementById('codes-modal-title').innerHTML='<i class="fas fa-code" style="color:var(--accent);"></i> '+currentAdmin.role.toUpperCase()+' Codes';document.getElementById('codes-list').innerHTML='<div style="text-align:center;padding:20px;"><span class="spinner"></span></div>';document.getElementById('admin-codes-modal').classList.add('open');try{const{data,error}=await sb.from('admin_codes').select('*').eq('role',currentAdmin.role).order('created_at',{ascending:false});if(error||!data?.length){document.getElementById('codes-list').innerHTML='<div style="color:#555;text-align:center;padding:30px;">No codes assigned</div>';return;}document.getElementById('codes-list').innerHTML=data.map(code=>`<div class="code-item" onclick="openAdminCode('${code.id}')"><div class="code-item-icon"><i class="fas fa-code"></i></div><div class="code-item-info"><div class="code-item-name">${escHtml(code.code_name)}</div><div class="code-item-role"><span class="role-badge ${getRoleBadgeClass(code.role)}">${escHtml(code.role)}</span></div></div><i class="fas fa-chevron-right" style="color:#555;"></i></div>`).join('');}catch(e){}}
+function closeCodesModal(){document.getElementById('admin-codes-modal').classList.remove('open');}
+async function openAdminCode(codeId){closeCodesModal();try{const{data}=await sb.from('admin_codes').select('*').eq('id',codeId).maybeSingle();if(!data)return;createNewTab(data.code_name||'Admin Code',null,null,data.code_html||'<h1>Empty</h1>',true);}catch(e){}}
+
+/* ===== STATUS ===== */
+function updateStatus(){document.getElementById('time').innerText=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});if(navigator.getBattery)navigator.getBattery().then(b=>{const lvl=Math.round(b.level*100);const icon=lvl>75?'fa-battery-full':lvl>50?'fa-battery-three-quarters':lvl>25?'fa-battery-half':lvl>10?'fa-battery-quarter':'fa-battery-empty';document.getElementById('battery').innerHTML='<i class="fas '+icon+'"></i> '+lvl+'%';});}
+setInterval(updateStatus,1000);
+
+/* ================================================================
+   EVENT LISTENERS
+   ================================================================ */
+document.getElementById('addr-bar').addEventListener('keypress',e=>{if(e.key==='Enter')handleTopBar();});
+document.getElementById('search-input').addEventListener('keypress',e=>{if(e.key==='Enter'){document.getElementById('home-suggestions').style.display='none';performSearch();}});
+document.getElementById('app-store-search').addEventListener('input',loadAppStore);
+document.getElementById('admin-login-modal').addEventListener('click',function(e){if(e.target===this)closeAdminLogin();});
+document.getElementById('admin-codes-modal').addEventListener('click',function(e){if(e.target===this)closeCodesModal();});
+document.getElementById('new-win-modal').addEventListener('click',function(e){if(e.target===this)closeNewWinModal();});
+document.getElementById('dev-tools-modal').addEventListener('click',function(e){if(e.target===this)closeDevTools();});
+document.getElementById('horizen-signin-modal').addEventListener('click',function(e){if(e.target===this)closeHorizenSignIn();});
+document.getElementById('signins-panel').addEventListener('click',function(e){if(e.target===this)closeSignInsPanel();});
+
+/* ================================================================
+   INIT
+   ================================================================ */
+window.onload=async()=>{
+  const savedBG=localStorage.getItem('horizon_bg');if(savedBG)document.body.style.backgroundImage="url('"+savedBG+"')";
+  updateStatus();restoreTabs();updateWifiIcon();
+  devLog('Horizon OS Pro Edition Initialized','info');
+  const ok=await initHorizenBlocker();
+  if(!ok){document.body.style.display='none';return;}
+  if(horizenAccount){
+    try{const{data}=await sb.from('horizen_accounts').select('*').eq('id',horizenAccount.id).maybeSingle();if(data){horizenAccount=data;localStorage.setItem('hz_account',JSON.stringify(data));}}catch(e){}
+    onHorizenAccountLoaded();
+  }
+  loadAppStore();fetchWeather();
+};
+</script>
+<script>
+/* ================================================================
+   HORIZEN OS  <->  HORIZENMESSAGES BRIDGE
+   Paste inside a new <script> tag right before </body> in Horizen OS.
+   Shows popup notifications (with Answer / Decline for calls) for
+   messages and calls that arrive in HorizenMessages.
+   ================================================================ */
+(function(){
+'use strict';
+
+/* Let every tab (including Messages) use mic + camera for calls */
+const _ce=document.createElement.bind(document);
+document.createElement=function(t,o){const e=_ce(t,o);if(String(t).toLowerCase()==='iframe')e.allow='microphone; camera; autoplay; clipboard-write; fullscreen';return e};
+
+/* ---------- DATABASE KEYS (HorizenMessages Supabase project) ---------- */
+const MSG_URL='https://wzfdomantqeaedfexpgq.supabase.co';
+const MSG_KEY='sb_publishable_vrz02Sm0olhxPqgc1MihJg_mrEMh7MG';
+const MSG_APP='https://messages.horizensearch.com';   /* where HorizenMessages is hosted */
+
+/* "Log in with HorizenMessages" (real OAuth 2.1 + PKCE).
+   Create the client in Supabase -> Authentication -> OAuth Apps (type: Public) and paste its Client ID here.
+   The redirect URI you register there must be exactly OAUTH_REDIRECT (e.g. https://horizensearch.com/). */
+const OAUTH_CLIENT_ID='1c07850f-28fa-4d37-9dec-1b0ecb186baf';
+const OAUTH_REDIRECT=location.origin+location.pathname;
+
+const mkDefault=()=>supabase.createClient(MSG_URL,MSG_KEY,{auth:{storageKey:'hz_messages_auth'}});
+let mb=mkDefault();
+/* Tokens from "Log in with HorizenMessages" also power the message/call popups */
+const TOK_KEY='hz_oauth_tokens';let oauthTok=null;
+function saveTok(t,user){oauthTok={access:t.access_token,refresh:t.refresh_token||(oauthTok&&oauthTok.refresh),exp:Date.now()+(t.expires_in||3600)*1000,user:user||(oauthTok&&oauthTok.user)};localStorage.setItem(TOK_KEY,JSON.stringify(oauthTok))}
+async function tokenFn(){
+  if(!oauthTok)return null;
+  if(Date.now()>oauthTok.exp-60000){
+    if(!oauthTok.refresh)return null;
+    try{
+      const r=await fetch(MSG_URL+'/auth/v1/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:oauthTok.refresh,client_id:OAUTH_CLIENT_ID})});
+      const t=await r.json();if(!r.ok||!t.access_token)throw 0;saveTok(t);
+    }catch(e){return null}
+  }
+  return oauthTok.access;
+}
+function useOAuthClient(){mb=supabase.createClient(MSG_URL,MSG_KEY,{accessToken:tokenFn})}
+function dropOAuth(){if(!oauthTok)return;if(started)teardown();oauthTok=null;localStorage.removeItem(TOK_KEY);mb=mkDefault()}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let me=null,started=false,P={},convs={},rings={},chans={},dbCh=null,sigCh=null,audioCtx=null,ringTimer=null;
+const nm=id=>(P[id]&&P[id].username)||'Someone';
+
+/* ---------- UI: styles, popup stack, login modal, menu item ---------- */
+const style=document.createElement('style');
+style.textContent=`
+#mb-stack{position:fixed;top:60px;right:14px;z-index:80000;display:flex;flex-direction:column;gap:10px;width:330px;max-width:calc(100vw - 28px);pointer-events:none}
+.mb-card{pointer-events:auto;cursor:pointer;background:rgba(14,14,14,.97);border:1px solid rgba(0,235,132,.35);border-radius:16px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.7);backdrop-filter:blur(20px);animation:slideInRight .3s ease}
+.mb-card.mb-call{border-color:rgba(0,235,132,.8);cursor:default}
+.mb-row{display:flex;align-items:center;gap:12px}
+.mb-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#00a86b);color:#000;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mb-txt{flex:1;min-width:0}
+.mb-t{font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb-b{font-size:12px;color:#aaa;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.mb-x{background:none;border:none;color:#666;font-size:18px;cursor:pointer;align-self:flex-start}
+.mb-x:hover{color:#fff}
+.mb-btns{display:flex;gap:8px;margin-top:10px}
+.mb-btns button{flex:1;padding:9px;border:none;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+.mb-ans{background:var(--accent);color:#000}
+.mb-dec{background:#ff4d6a;color:#fff}`;
+document.head.appendChild(style);
+
+const stack=document.createElement('div');stack.id='mb-stack';document.body.appendChild(stack);
+
+const modal=document.createElement('div');modal.id='mb-login-modal';modal.className='modal-base';
+modal.innerHTML=`<div class="modal-card">
+  <h3><i class="fas fa-comments" style="color:var(--accent);"></i> Messages Sign-In</h3>
+  <div class="modal-sub">Use your HorizenMessages email and password</div>
+  <div class="form-field"><label>Email</label><input type="email" id="mb-email" autocomplete="email"></div>
+  <div class="form-field"><label>Password</label><input type="password" id="mb-pass" autocomplete="current-password"></div>
+  <div class="form-error" id="mb-err"></div>
+  <div class="modal-actions"><button class="btn-cancel" id="mb-cancel">Cancel</button><button class="btn-primary" id="mb-go">Sign In</button></div>
+</div>`;
+document.body.appendChild(modal);
+
+const item=document.createElement('div');item.className='fp-popup-item';item.id='mb-menu-item';
+$('fp-popup').appendChild(item);
+function paintMenu(){item.innerHTML='<i class="fas fa-comments"></i> '+(me?'Messages: '+esc(nm(me.id))+' (sign out)':'Messages Sign-In');}
+item.onclick=()=>{$('fp-popup').classList.remove('open');if(me)logout();else{$('mb-err').style.display='none';modal.classList.add('open');setTimeout(()=>$('mb-email').focus(),100);}};
+$('mb-cancel').onclick=()=>modal.classList.remove('open');
+modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open')});
+$('mb-pass').addEventListener('keypress',e=>{if(e.key==='Enter')login()});
+$('mb-go').onclick=login;
+
+/* ---------- Popups, sound, browser notifications ---------- */
+function popup(o){
+  const el=document.createElement('div');el.className='mb-card'+(o.call?' mb-call':'');
+  el.innerHTML='<div class="mb-row"><div class="mb-av">'+esc((o.title||'?')[0].toUpperCase())+'</div><div class="mb-txt"><div class="mb-t">'+esc(o.title)+'</div><div class="mb-b">'+esc(o.body)+'</div></div><button class="mb-x" title="Dismiss">&times;</button></div>'
+    +(o.call?'<div class="mb-btns"><button class="mb-ans">Answer</button><button class="mb-dec">Decline</button></div>':'');
+  const close=()=>{clearTimeout(el._t);el.remove()};
+  el.close=close;
+  el.querySelector('.mb-x').onclick=e=>{e.stopPropagation();close();o.onDismiss&&o.onDismiss()};
+  if(o.call){
+    el.querySelector('.mb-ans').onclick=()=>{close();o.onAnswer()};
+    el.querySelector('.mb-dec').onclick=()=>{close();o.onDecline()};
+  }else el.onclick=()=>{close();o.onOpen&&o.onOpen()};
+  stack.appendChild(el);
+  el._t=setTimeout(()=>{close();o.onDismiss&&o.onDismiss()},o.ms||6000);
+  return el;
+}
+function beep(){try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.25);}catch(e){}}
+function startRing(){stopRing();beep();ringTimer=setInterval(beep,1500)}
+function stopRing(){clearInterval(ringTimer);ringTimer=null}
+function notifyOS(title,body,tag){
+  if(!document.hidden||!('Notification' in window)||Notification.permission!=='granted')return;
+  const n=new Notification(title,{body,tag});n.onclick=()=>{window.focus();n.close()};
+}
+
+/* ---------- Open / find the HorizenMessages tab ---------- */
+function msgTab(){
+  for(const f of document.querySelectorAll('#viewport .view-pane iframe')){
+    if((f.src||'').indexOf(MSG_APP)===0){const pane=f.closest('.view-pane');return{id:pane.id.replace('view-',''),active:pane.classList.contains('active')};}
+  }
+  return null;
+}
+function openMessages(hash){
+  const t=msgTab();
+  if(t){switchTab(t.id);return}
+  openUrl(MSG_APP+(hash||''),'HorizenMessages');
+}
+
+/* ---------- Incoming messages ---------- */
+async function loadMeta(){
+  const [a,b]=await Promise.all([mb.from('profiles').select('id,username'),mb.from('conversations').select('id,name,is_group')]);
+  (a.data||[]).forEach(p=>P[p.id]=p);(b.data||[]).forEach(c=>convs[c.id]=c);
+}
+async function onMsg(m){
+  if(!me||m.sender_id===me.id||m.deleted)return;
+  if(!convs[m.conversation_id]||!P[m.sender_id]){await loadMeta();if(!convs[m.conversation_id])return}
+  if(!m.body&&!m.file_name)return;
+  if(msgTab()&&msgTab().active)return;           /* you're already looking at Messages */
+  const c=convs[m.conversation_id],g=c.is_group;
+  const title=g?c.name:nm(m.sender_id);
+  const body=(g?nm(m.sender_id)+': ':'')+(m.body||'📎 '+(m.file_name||'File'));
+  popup({title,body:body.slice(0,140),ms:7000,onOpen:()=>openMessages('#chat='+m.conversation_id)});
+  beep();notifyOS(title,body,'m-'+m.conversation_id);
+}
+
+/* ---------- Incoming calls (WebRTC signals over Realtime broadcast) ---------- */
+function sendSig(to,payload){
+  const ch=chans[to]||(chans[to]=new Promise(r=>{const c=mb.channel('u:'+to);c.subscribe(s=>{if(s==='SUBSCRIBED')r(c)})}));
+  return ch.then(c=>c.send({type:'broadcast',event:'sig',payload:Object.assign({},payload,{from:me.id})}));
+}
+function ringDone(from){if(rings[from]){rings[from].close();delete rings[from]}if(!Object.keys(rings).length)stopRing()}
+async function onSig(p){
+  if(!me||!p)return;
+  if(p.t==='offer'){
+    if(msgTab()&&msgTab().active)return;          /* Messages shows its own call screen */
+    if(!P[p.from])await loadMeta();
+    ringDone(p.from);
+    const kind=p.video?'Incoming video call':'Incoming voice call';
+    rings[p.from]=popup({title:nm(p.from),body:kind,call:true,ms:45000,
+      onAnswer:()=>{ringDone(p.from);openMessages('#sig='+encodeURIComponent(btoa(JSON.stringify({p,at:Date.now()}))))},
+      onDecline:()=>{ringDone(p.from);sendSig(p.from,{t:'end'})},
+      onDismiss:()=>ringDone(p.from)});
+    startRing();notifyOS(nm(p.from),kind,'call-'+p.from);
+  }else if(p.t==='end')ringDone(p.from);
+}
+
+/* ---------- Auth + lifecycle ---------- */
+async function startBridge(user){
+  if(started)return;started=true;me=user;
+  await loadMeta();paintMenu();
+  dbCh=mb.channel('os-db')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},p=>onMsg(p.new))
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'conversation_members'},()=>loadMeta())
+    .subscribe();
+  sigCh=mb.channel('u:'+me.id).on('broadcast',{event:'sig'},({payload})=>onSig(payload)).subscribe();
+  document.addEventListener('click',()=>{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()},{once:true});
+}
+function teardown(){
+  if(dbCh)mb.removeChannel(dbCh);if(sigCh)mb.removeChannel(sigCh);
+  dbCh=sigCh=null;chans={};rings={};stopRing();stack.innerHTML='';
+  started=false;me=null;P={};convs={};paintMenu();
+}
+async function approved(uid){const {data}=await mb.from('approved_acounts').select('user_id').eq('user_id',uid).maybeSingle();return !!data}
+async function msgSignIn(email,pw){
+  dropOAuth();
+  const {data,error}=await mb.auth.signInWithPassword({email,password:pw});
+  if(error)return{ok:false,reason:'invalid',msg:error.message};
+  if(!(await approved(data.user.id))){await mb.auth.signOut({scope:'local'});return{ok:false,reason:'unconfirmed',msg:'Your HorizenMessages account isn\u2019t confirmed yet. Check your email.'}}
+  await startBridge(data.user);
+  return{ok:true,user:data.user};
+}
+/* Find (or create) the Horizen OS account that belongs to this HorizenMessages login, then sign into it */
+async function linkHorizenAccount(user){
+  const em=user.email;
+  let {data:acc}=await sb.from('horizen_accounts').select('*').eq('email',em).maybeSingle();
+  if(!acc){
+    const base=(P[user.id]&&P[user.id].username)||String(user.name||'').replace(/\s+/g,'').toLowerCase()||em.split('@')[0];
+    const rnd=Array.from(crypto.getRandomValues(new Uint8Array(16))).map(x=>x.toString(16).padStart(2,'0')).join('');
+    for(let i=0;i<3&&!acc;i++){
+      const r=await sb.from('horizen_accounts').insert({username:i?base+Math.floor(Math.random()*9000+1000):base,email:em,password_hash:'messages:'+rnd,display_name:base}).select().single();
+      if(!r.error)acc=r.data;
+    }
+  }
+  if(!acc){showToast('Could not set up your Horizen account','Horizon','⚠️');return}
+  horizenAccount=acc;localStorage.setItem('hz_account',JSON.stringify(acc));
+  try{await sb.from('horizen_sessions').upsert({account_id:acc.id,fingerprint:myAddress,last_active:new Date().toISOString()},{onConflict:'account_id,fingerprint'});}catch(e){}
+  closeHorizenSignIn();onHorizenAccountLoaded();
+  showToast('Welcome, '+(acc.display_name||acc.username)+'!','Horizon','✅');
+}
+async function login(){
+  const email=$('mb-email').value.trim(),pw=$('mb-pass').value,err=$('mb-err'),btn=$('mb-go');
+  const fail=t=>{err.textContent=t;err.style.display='block';btn.disabled=false;btn.textContent='Sign In'};
+  if(!email||!pw)return fail('Enter your email and password');
+  btn.disabled=true;btn.textContent='Signing in...';err.style.display='none';
+  const r=await msgSignIn(email,pw);
+  if(!r.ok)return fail(r.msg);
+  modal.classList.remove('open');$('mb-pass').value='';btn.disabled=false;btn.textContent='Sign In';
+  showToast('You\u2019ll get message and call popups now','Messages','💬');
+  if(!horizenAccount)await linkHorizenAccount(r.user);
+}
+async function logout(quiet){if(oauthTok)dropOAuth();else await mb.auth.signOut();teardown();if(!quiet)showToast('Signed out of Messages','Messages','👋')}
+
+mb.auth.onAuthStateChange(e=>{if(e==='SIGNED_OUT'&&started)teardown()});
+async function init(){
+  paintMenu();
+  await oauthFinish();
+  if(!started){
+    const sv=JSON.parse(localStorage.getItem(TOK_KEY)||'null');
+    if(sv&&sv.user){
+      oauthTok=sv;useOAuthClient();
+      if(await tokenFn()){await startBridge(sv.user);if(!horizenAccount)await linkHorizenAccount({id:sv.user.id,email:sv.user.email,name:''});}
+      else dropOAuth();
+    }
+  }
+  if(started)return;
+  const {data:{session}}=await mb.auth.getSession();
+  if(!session)return;
+  if(await approved(session.user.id)){await startBridge(session.user);if(!horizenAccount)await linkHorizenAccount(session.user);}else await mb.auth.signOut({scope:'local'});
+}
+/* ---------- Log in with HorizenMessages (OAuth 2.1 authorization code + PKCE) ---------- */
+function b64u(buf){return btoa(String.fromCharCode.apply(null,new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+async function oauthStart(){
+  if(!OAUTH_CLIENT_ID){showToast('Paste your OAuth Client ID into the bridge script first','HorizenMessages','⚠️');return}
+  const v=b64u(crypto.getRandomValues(new Uint8Array(32))),st=b64u(crypto.getRandomValues(new Uint8Array(16)));
+  const ch=b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)));
+  sessionStorage.setItem('hz_oauth',JSON.stringify({v,st}));
+  location.href=MSG_URL+'/auth/v1/oauth/authorize?'+new URLSearchParams({response_type:'code',client_id:OAUTH_CLIENT_ID,redirect_uri:OAUTH_REDIRECT,scope:'email profile',state:st,code_challenge:ch,code_challenge_method:'S256'});
+}
+async function oauthFinish(){
+  const q=new URLSearchParams(location.search);
+  if(!q.has('state')||!(q.has('code')||q.has('error')))return;
+  const saved=JSON.parse(sessionStorage.getItem('hz_oauth')||'null');
+  if(!saved||saved.st!==q.get('state'))return;            /* not our request */
+  sessionStorage.removeItem('hz_oauth');
+  history.replaceState(null,'',location.pathname);
+  if(q.get('error'))return showToast(q.get('error_description')||'Sign-in was cancelled','HorizenMessages','⚠️');
+  try{
+    const r=await fetch(MSG_URL+'/auth/v1/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({grant_type:'authorization_code',code:q.get('code'),client_id:OAUTH_CLIENT_ID,redirect_uri:OAUTH_REDIRECT,code_verifier:saved.v})});
+    const t=await r.json();
+    if(!r.ok||!t.access_token)throw new Error(t.error_description||t.msg||'Sign-in failed');
+    const u=await(await fetch(MSG_URL+'/auth/v1/oauth/userinfo',{headers:{Authorization:'Bearer '+t.access_token}})).json();
+    if(!u.email)throw new Error('HorizenMessages did not share your email');
+    if(u.email_verified===false)throw new Error('Your HorizenMessages email isn\u2019t verified');
+    if(started)teardown();
+    saveTok(t,{id:u.sub,email:u.email});useOAuthClient();await startBridge({id:u.sub,email:u.email});
+    await linkHorizenAccount({id:u.sub,email:u.email,name:u.name});
+  }catch(e){showToast(e.message,'HorizenMessages','⚠️')}
+}
+(function addOAuthButtons(){
+  ['#horizen-signin-modal','#mb-login-modal'].forEach(sel=>{
+    const actions=document.querySelector(sel+' .modal-actions');if(!actions)return;
+    const b=document.createElement('button');b.type='button';
+    b.style.cssText='width:100%;margin-top:14px;padding:12px;border-radius:12px;border:1px solid rgba(0,235,132,.4);background:rgba(0,235,132,.12);color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit';
+    b.innerHTML='<i class="fas fa-comments"></i> Log in with HorizenMessages';
+    b.onclick=oauthStart;actions.parentNode.insertBefore(b,actions);
+  });
+})();
+
+/* ---------- Horizen Sign-In now uses HorizenMessages accounts ---------- */
+if(typeof doHorizenLogin==='function'){
+  const legacyLogin=window.doHorizenLogin,legacyLogout=window.doHorizenLogout;
+  const sub=document.querySelector('#horizen-signin-modal .modal-sub');
+  if(sub)sub.textContent='Sign in with your HorizenMessages account';
+  const idf=$('hs-login-id');if(idf)idf.placeholder='HorizenMessages email';
+  window.doHorizenLogin=async function(){
+    const id=$('hs-login-id').value.trim(),pass=$('hs-login-pass').value,errEl=$('hs-error'),btn=$('hs-submit-btn');
+    if(id.indexOf('@')>0&&pass){
+      btn.disabled=true;btn.textContent='Signing in...';errEl.style.display='none';
+      const r=await msgSignIn(id,pass);
+      btn.disabled=false;btn.textContent='Sign In';
+      if(r.ok)return linkHorizenAccount(r.user);
+      if(r.reason==='unconfirmed'){errEl.textContent=r.msg;errEl.style.display='block';return}
+    }
+    return legacyLogin();   /* older Horizen accounts (username login) still work */
+  };
+  window.doHorizenSignup=function(){
+    closeHorizenSignIn();openMessages();
+    showToast('Create your account in HorizenMessages, then sign in here with the same email','Horizen Account','💬');
+  };
+  window.doHorizenLogout=async function(){legacyLogout();if(me)await logout(true)};
+}
+
+if(document.readyState==='complete')init();else window.addEventListener('load',init);
+})();
+</script>
+</body>
+</html>
